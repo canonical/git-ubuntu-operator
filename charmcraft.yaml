@@ -16,3 +16,8 @@ platforms:
 
 config:
   options:
+    channel:
+      description: |
+        Channel for the git-ubuntu snap.
+      default: "beta"
+      type: string
