@@ -19,10 +19,20 @@ parts:
     plugin: charm
     source: .
 
+charm-libs:
+  - lib: operator-libs-linux.apt
+    version: "0"
+
 config:
   options:
     channel:
       description: |
         Channel for the git-ubuntu snap.
       default: "beta"
+      type: string
+    lpuser:
+      description: |
+        Launchpad user used to push updates to the official git repositories.
+        This user must be a member of ~git-ubuntu-import.
+      default: "git-ubuntu-bot"
       type: string
