@@ -18,6 +18,7 @@ from os import system
 
 import ops
 from charms.operator_libs_linux.v0 import apt
+from charms.operator_libs_linux.v2 import snap
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -55,6 +56,27 @@ class GitUbuntuCharm(ops.CharmBase):
 
         return True
 
+    def _update_git_ubuntu_snap(self):
+        """Install or refresh the git-ubuntu snap with the given channel version."""
+        self.unit.status = ops.MaintenanceStatus("Installing git-ubuntu snap")
+
+        # Confirm the channel is valid.
+        channel = self.config.get("channel")
+        if channel not in ("beta", "edge", "stable"):
+            self.unit.status = ops.BlockedStatus("Invalid channel configured.")
+            return False
+
+        # Install or refresh the git-ubuntu snap.
+        try:
+            cache = snap.SnapCache()
+            git_ubuntu_snap = cache["git-ubuntu"]
+            git_ubuntu_snap.ensure(snap.SnapState.Latest, classic=True, channel=channel)
+        except snap.SnapError as e:
+            self.unit.status = ops.BlockedStatus(f"Failed to install git-ubuntu snap: {str(e)}")
+            return False
+
+        return True
+
     def _on_install(self, event: ops.InstallEvent):
         """Handle install event."""
         # Install git
@@ -66,17 +88,15 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus(f"Failed to install git: {str(e)}")
             return
 
+        # Set lpuser config
         if not self._update_lpuser_config():
             return
 
         # Install git-ubuntu snap
-        self.unit.status = ops.MaintenanceStatus("Installing git-ubuntu snap")
-        channel = self.config.get("channel")
-        if channel in ("beta", "edge", "stable"):
-            system(f"snap install git-ubuntu --{channel} --classic")
-            self.unit.status = ops.ActiveStatus("Ready")
-        else:
-            self.unit.status = ops.BlockedStatus("Invalid channel configured.")
+        if not self._update_git_ubuntu_snap():
+            return
+
+        self.unit.status = ops.ActiveStatus("Ready")
 
 
 if __name__ == "__main__":  # pragma: nocover
