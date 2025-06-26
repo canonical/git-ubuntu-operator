@@ -98,6 +98,18 @@ class GitUbuntuCharm(ops.CharmBase):
 
         self.unit.status = ops.ActiveStatus("Ready")
 
+    def _on_config_changed(self, event: ops.ConfigChangedEvent):
+        """Handle updates to config items."""
+        # Update lpuser config
+        if not self._update_lpuser_config():
+            return
+
+        # Update git-ubuntu snap
+        if not self._update_git_ubuntu_snap():
+            return
+
+        self.unit.status = ops.ActiveStatus("Ready")
+
 
 if __name__ == "__main__":  # pragma: nocover
     ops.main(GitUbuntuCharm)
