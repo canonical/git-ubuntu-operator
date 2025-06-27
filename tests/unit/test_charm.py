@@ -3,6 +3,8 @@
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 
+"""Unit tests."""
+
 from unittest.mock import patch
 
 import pytest
@@ -14,11 +16,13 @@ from charm import GitUbuntuCharm
 
 @pytest.fixture
 def ctx():
+    """Create a standard context for the charm."""
     return Context(GitUbuntuCharm)
 
 
 @pytest.fixture
 def base_state(ctx):
+    """Create a base state for the charm."""
     return State(leader=True)
 
 

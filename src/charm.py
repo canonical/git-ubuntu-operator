@@ -27,14 +27,19 @@ VALID_LOG_LEVELS = ["info", "debug", "warning", "error", "critical"]
 
 
 class GitUbuntuCharm(ops.CharmBase):
-    """Charm the service."""
+    """Charm git-ubuntu for package importing."""
 
     def __init__(self, framework: ops.Framework):
+        """Construct charm.
+
+        Args:
+            framework: charm framework managed by parent class.
+        """
         super().__init__(framework)
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.install, self._on_install)
 
-    def _on_start(self, event: ops.StartEvent) -> None:
+    def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
         self.unit.status = ops.ActiveStatus()
 
@@ -77,7 +82,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         return True
 
-    def _on_install(self, event: ops.InstallEvent) -> None:
+    def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install event."""
         # Install git
         self.unit.status = ops.MaintenanceStatus("Installing git")
@@ -98,7 +103,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         self.unit.status = ops.ActiveStatus("Ready")
 
-    def _on_config_changed(self, event: ops.ConfigChangedEvent) -> None:
+    def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle updates to config items."""
         # Update lpuser config
         if not self._update_lpuser_config():
