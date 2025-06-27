@@ -137,3 +137,30 @@ def test_config_changed_success(
 
     mock_update_lpuser_config.assert_called_once()
     mock_update_git_ubuntu_snap.assert_called_once()
+
+
+@patch("charm.GitUbuntuCharm._update_git_ubuntu_snap")
+def test_config_changed_invalid_lpuser(mock_update_git_ubuntu_snap, ctx):
+    """Test installation with invalid lpuser."""
+    state = State(config={"channel": "beta", "lpuser": "Invalid@User"})
+
+    out = ctx.run(ctx.on.config_changed(), state)
+
+    assert isinstance(out.unit_status, BlockedStatus)
+    assert "lpuser does not match" in str(out.unit_status.message)
+
+    mock_update_git_ubuntu_snap.assert_not_called()
+
+
+@patch("charm.GitUbuntuCharm._update_lpuser_config")
+def test_config_changed_invalid_channel(mock_update_lpuser_config, ctx):
+    """Test installation with invalid channel."""
+    mock_update_lpuser_config.return_value = True
+    state = State(config={"channel": "invalid", "lpuser": "git-ubuntu-bot"})
+
+    out = ctx.run(ctx.on.config_changed(), state)
+
+    assert isinstance(out.unit_status, BlockedStatus)
+    assert "Invalid channel" in str(out.unit_status.message)
+
+    mock_update_lpuser_config.assert_called_once()
