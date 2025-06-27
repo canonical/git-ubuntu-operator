@@ -34,11 +34,11 @@ class GitUbuntuCharm(ops.CharmBase):
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.install, self._on_install)
 
-    def _on_start(self, event: ops.StartEvent):
+    def _on_start(self, event: ops.StartEvent) -> None:
         """Handle start event."""
         self.unit.status = ops.ActiveStatus()
 
-    def _update_lpuser_config(self):
+    def _update_lpuser_config(self) -> bool:
         """Update the launchpad user setting."""
         # Confirm lpuser follows Launchpad User ID requirements.
         lpuser = str(self.config.get("lpuser"))
@@ -56,7 +56,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         return True
 
-    def _update_git_ubuntu_snap(self):
+    def _update_git_ubuntu_snap(self) -> bool:
         """Install or refresh the git-ubuntu snap with the given channel version."""
         self.unit.status = ops.MaintenanceStatus("Installing git-ubuntu snap")
 
@@ -77,7 +77,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         return True
 
-    def _on_install(self, event: ops.InstallEvent):
+    def _on_install(self, event: ops.InstallEvent) -> None:
         """Handle install event."""
         # Install git
         self.unit.status = ops.MaintenanceStatus("Installing git")
@@ -98,7 +98,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         self.unit.status = ops.ActiveStatus("Ready")
 
-    def _on_config_changed(self, event: ops.ConfigChangedEvent):
+    def _on_config_changed(self, event: ops.ConfigChangedEvent) -> None:
         """Handle updates to config items."""
         # Update lpuser config
         if not self._update_lpuser_config():
