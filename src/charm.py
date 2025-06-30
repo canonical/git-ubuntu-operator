@@ -69,7 +69,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         # Install or refresh the git-ubuntu snap.
         if not pkgs.git_ubuntu_snap_refresh(channel):
-            self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu snap")
+            self.unit.status = ops.BlockedStatus("Failed to install or refresh git-ubuntu snap")
             return False
 
         return True

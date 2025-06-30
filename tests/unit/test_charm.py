@@ -164,3 +164,71 @@ def test_config_changed_invalid_channel(mock_update_lpuser_config, ctx):
     assert "Invalid channel" in str(out.unit_status.message)
 
     mock_update_lpuser_config.assert_called_once()
+
+
+@patch("charm.pkgs.git_update_lpuser_config")
+@patch("charm.GitUbuntuCharm._update_git_ubuntu_snap")
+def test_update_lpuser_config_git_success(
+    mock_update_git_ubuntu_snap, mock_git_config, ctx, base_state
+):
+    """Test a git config update failure on install."""
+    mock_git_config.return_value = True
+
+    out = ctx.run(ctx.on.config_changed(), base_state)
+
+    assert out.unit_status == ActiveStatus("Ready")
+
+    mock_git_config.assert_called_once()
+    mock_update_git_ubuntu_snap.assert_called_once()
+
+
+@patch("charm.pkgs.git_update_lpuser_config")
+def test_update_lpuser_config_git_fail(mock_git_config, ctx, base_state):
+    """Test a git config update failure on install."""
+    mock_git_config.return_value = False
+
+    out = ctx.run(ctx.on.config_changed(), base_state)
+
+    assert isinstance(out.unit_status, BlockedStatus)
+    assert "Failed to update lpuser config." in str(out.unit_status.message)
+
+
+@patch("charm.GitUbuntuCharm._update_lpuser_config")
+@patch("charm.pkgs.git_ubuntu_snap_refresh")
+def test_update_snap_refresh_success(
+    mock_git_ubuntu_snap_refresh,
+    mock_update_lpuser_config,
+    ctx,
+):
+    """Test successful snap refresh with valid config values."""
+    mock_update_lpuser_config.return_value = True
+    mock_git_ubuntu_snap_refresh.return_value = True
+    state = State(config={"channel": "edge", "lpuser": "git-ubuntu-bot"})
+
+    out = ctx.run(ctx.on.config_changed(), state)
+
+    assert out.unit_status == ActiveStatus("Ready")
+
+    mock_update_lpuser_config.assert_called_once()
+    mock_git_ubuntu_snap_refresh.assert_called_once()
+
+
+@patch("charm.GitUbuntuCharm._update_lpuser_config")
+@patch("charm.pkgs.git_ubuntu_snap_refresh")
+def test_update_snap_refresh_fail(
+    mock_git_ubuntu_snap_refresh,
+    mock_update_lpuser_config,
+    ctx,
+):
+    """Test failure to snap refresh with valid config values."""
+    mock_update_lpuser_config.return_value = True
+    mock_git_ubuntu_snap_refresh.return_value = False
+    state = State(config={"channel": "edge", "lpuser": "git-ubuntu-bot"})
+
+    out = ctx.run(ctx.on.config_changed(), state)
+
+    assert isinstance(out.unit_status, BlockedStatus)
+    assert "Failed to install or refresh git-ubuntu snap" in str(out.unit_status.message)
+
+    mock_update_lpuser_config.assert_called_once()
+    mock_git_ubuntu_snap_refresh.assert_called_once()
