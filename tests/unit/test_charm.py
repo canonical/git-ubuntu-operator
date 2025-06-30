@@ -3,7 +3,7 @@
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 
-"""Unit tests."""
+"""Unit tests for git-ubuntu charm."""
 
 from unittest.mock import patch
 
