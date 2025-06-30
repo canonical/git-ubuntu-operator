@@ -15,7 +15,6 @@ https://juju.is/docs/sdk/create-a-minimal-kubernetes-charm
 import logging
 
 import ops
-from charms.operator_libs_linux.v0 import apt
 
 import launchpad as lp
 import package_configuration as pkgs
@@ -77,13 +76,11 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle install event."""
-        # Install git
+        # Install git and update lp user
         self.unit.status = ops.MaintenanceStatus("Installing git")
-        try:
-            apt.update()
-            apt.add_package("git")
-        except apt.PackageError as e:
-            self.unit.status = ops.BlockedStatus(f"Failed to install git: {str(e)}")
+
+        if not pkgs.git_install():
+            self.unit.status = ops.BlockedStatus("Failed to install git")
             return
 
         if not self._update_lpuser_config():

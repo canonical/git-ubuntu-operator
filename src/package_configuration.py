@@ -6,6 +6,7 @@
 
 from os import system
 
+from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v2 import snap
 
 
@@ -22,6 +23,22 @@ def git_update_lpuser_config(lp_username: str) -> bool:
     update_config_result = system(f'git config --global gitubuntu.lpuser "{lp_username}"')
     if update_config_result != 0:
         return False
+    return True
+
+
+def git_install() -> bool:
+    """
+    Install git from apt.
+
+    Returns:
+        true if git install succeeded, false otherwise.
+    """
+    try:
+        apt.update()
+        apt.add_package("git")
+    except apt.PackageError:
+        return False
+
     return True
 
 
