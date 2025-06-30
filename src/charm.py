@@ -16,7 +16,6 @@ import logging
 
 import ops
 from charms.operator_libs_linux.v0 import apt
-from charms.operator_libs_linux.v2 import snap
 
 import launchpad as lp
 import package_configuration as pkgs
@@ -61,21 +60,17 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _update_git_ubuntu_snap(self) -> bool:
         """Install or refresh the git-ubuntu snap with the given channel version."""
-        self.unit.status = ops.MaintenanceStatus("Installing git-ubuntu snap")
+        self.unit.status = ops.MaintenanceStatus("Updating git-ubuntu snap")
 
         # Confirm the channel is valid.
-        channel = self.config.get("channel")
+        channel = str(self.config.get("channel"))
         if channel not in ("beta", "edge", "stable"):
             self.unit.status = ops.BlockedStatus("Invalid channel configured.")
             return False
 
         # Install or refresh the git-ubuntu snap.
-        try:
-            cache = snap.SnapCache()
-            git_ubuntu_snap = cache["git-ubuntu"]
-            git_ubuntu_snap.ensure(snap.SnapState.Latest, classic=True, channel=channel)
-        except snap.SnapError as e:
-            self.unit.status = ops.BlockedStatus(f"Failed to install git-ubuntu snap: {str(e)}")
+        if not pkgs.git_ubuntu_snap_refresh(channel):
+            self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu snap")
             return False
 
         return True

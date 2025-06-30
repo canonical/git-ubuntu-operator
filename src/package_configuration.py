@@ -6,6 +6,8 @@
 
 from os import system
 
+from charms.operator_libs_linux.v2 import snap
+
 
 def git_update_lpuser_config(lp_username: str) -> bool:
     """
@@ -20,4 +22,24 @@ def git_update_lpuser_config(lp_username: str) -> bool:
     update_config_result = system(f'git config --global gitubuntu.lpuser "{lp_username}"')
     if update_config_result != 0:
         return False
+    return True
+
+
+def git_ubuntu_snap_refresh(channel: str) -> bool:
+    """
+    Install or refresh the git-ubuntu snap with the given channel version.
+
+    Args:
+        channel: The channel to install the snap from.
+
+    Returns:
+        true if the snap install succeeded, false otherwise.
+    """
+    try:
+        cache = snap.SnapCache()
+        git_ubuntu_snap = cache["git-ubuntu"]
+        git_ubuntu_snap.ensure(snap.SnapState.Latest, classic=True, channel=channel)
+    except snap.SnapError:
+        return False
+
     return True
