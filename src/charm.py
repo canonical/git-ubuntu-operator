@@ -13,12 +13,13 @@ https://juju.is/docs/sdk/create-a-minimal-kubernetes-charm
 """
 
 import logging
-import re
-from os import system
 
 import ops
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v2 import snap
+
+import launchpad as lp
+import package_configuration as pkgs
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -45,21 +46,17 @@ class GitUbuntuCharm(ops.CharmBase):
         self.unit.status = ops.ActiveStatus()
 
     def _update_lpuser_config(self) -> bool:
-        """Update the launchpad user setting."""
-        # Confirm lpuser follows Launchpad User ID requirements.
+        """Attempt to update git config with the new Launchpad User ID."""
         lpuser = str(self.config.get("lpuser"))
-        if not re.match(r"^[a-z0-9\.\-\+]+$", lpuser):
+        if lp.is_valid_lp_username(lpuser):
+            if not pkgs.git_update_lpuser_config(lpuser):
+                self.unit.status = ops.BlockedStatus("Failed to update lpuser config.")
+                return False
+        else:
             self.unit.status = ops.BlockedStatus(
                 "lpuser does not match Launchpad User ID requirements."
             )
             return False
-
-        # Attempt to update the global git config with the new Launchpad User ID.
-        update_config_result = system(f'git config --global gitubuntu.lpuser "{lpuser}"')
-        if update_config_result != 0:
-            self.unit.status = ops.BlockedStatus("Failed to update lpuser config.")
-            return False
-
         return True
 
     def _update_git_ubuntu_snap(self) -> bool:
@@ -94,7 +91,6 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus(f"Failed to install git: {str(e)}")
             return
 
-        # Set lpuser config
         if not self._update_lpuser_config():
             return
 
