@@ -42,6 +42,19 @@ class GitUbuntuCharm(ops.CharmBase):
 
         self._git_ubuntu_importer_node = None
 
+    @property
+    def _is_primary(self) -> bool:
+        if self.config.get("primary"):
+            return True
+        return False
+
+    @property
+    def _num_workers(self) -> int:
+        num_workers = self.config.get("workers")
+        if isinstance(num_workers, int):
+            return num_workers
+        return 0
+
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
         self.unit.status = ops.ActiveStatus()
@@ -94,9 +107,7 @@ class GitUbuntuCharm(ops.CharmBase):
             return
 
         # Initialize git-ubuntu instance manager
-        self._git_ubuntu_importer_node = ImporterNode(
-            self.config.get("primary"), self.config.get("workers")
-        )
+        self._git_ubuntu_importer_node = ImporterNode(self._is_primary, self._num_workers)
 
         self.unit.status = ops.ActiveStatus("Ready")
 
