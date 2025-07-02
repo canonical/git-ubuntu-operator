@@ -18,6 +18,7 @@ import ops
 
 import launchpad as lp
 import package_configuration as pkgs
+from importer_node import ImporterNode
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -38,6 +39,8 @@ class GitUbuntuCharm(ops.CharmBase):
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+
+        self._git_ubuntu_importer_node = None
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
@@ -89,6 +92,11 @@ class GitUbuntuCharm(ops.CharmBase):
         # Install git-ubuntu snap
         if not self._update_git_ubuntu_snap():
             return
+
+        # Initialize git-ubuntu instance manager
+        self._git_ubuntu_importer_node = ImporterNode(
+            self.config.get("primary"), self.config.get("workers")
+        )
 
         self.unit.status = ops.ActiveStatus("Ready")
 
