@@ -40,6 +40,21 @@ def git_install() -> bool:
     return True
 
 
+def sqlite3_install() -> bool:
+    """Install sqlite3 from apt.
+
+    Returns:
+        True if sqlite3 install succeeded, False otherwise.
+    """
+    try:
+        apt.update()
+        apt.add_package("sqlite3")
+    except apt.PackageError:
+        return False
+
+    return True
+
+
 def git_ubuntu_snap_refresh(channel: str) -> bool:
     """Install or refresh the git-ubuntu snap with the given channel version.
 

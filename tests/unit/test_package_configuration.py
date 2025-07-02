@@ -53,6 +53,28 @@ def test_git_install_fail(mock_add_package, mock_update):
     mock_add_package.assert_called_once_with("git")
 
 
+@patch("package_configuration.apt.update")
+@patch("package_configuration.apt.add_package")
+def test_sqlite3_install_success(mock_add_package, mock_update):
+    """Test successful git install."""
+    assert pkgs.sqlite3_install()
+
+    mock_update.assert_called_once()
+    mock_add_package.assert_called_once_with("sqlite3")
+
+
+@patch("package_configuration.apt.update")
+@patch("package_configuration.apt.add_package")
+def test_sqlite3_install_fail(mock_add_package, mock_update):
+    """Test failed git install."""
+    mock_add_package.side_effect = apt.PackageError
+
+    assert not pkgs.sqlite3_install()
+
+    mock_update.assert_called_once()
+    mock_add_package.assert_called_once_with("sqlite3")
+
+
 @patch("package_configuration.snap.SnapCache")
 def test_git_ubuntu_snap_refresh_failure(mock_snap_cache):
     """Test refresh function when a SnapError occurs."""
