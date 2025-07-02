@@ -38,3 +38,15 @@ config:
         This user must be a member of ~git-ubuntu-import.
       default: "git-ubuntu-bot"
       type: string
+    workers:
+      description: |
+        The number of git-ubuntu worker processes to maintain.
+      default: 2
+      type: int
+    primary:
+      description: |
+        If this is the primary git-ubuntu importer node, containing the Broker
+        and Poller instances. Non-primary nodes will only contain Worker
+        instances.
+      default: True
+      type: boolean
