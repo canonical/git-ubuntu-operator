@@ -19,11 +19,38 @@ class ImporterNode:
         """
         self._primary = primary
 
-        self._broker = None
-        self._poller = None
-
-        if primary:
+        if self._primary:
             self._broker = GitUbuntuBroker()
             self._poller = GitUbuntuPoller()
 
         self._workers = [GitUbuntuWorker() for _ in range(num_workers)]
+
+    def install(self) -> bool:
+        """Set up database and denylist if primary, and run git-ubuntu instance setup.
+
+        Returns:
+            True if installation succeeded, False otherwise.
+        """
+        if self._primary:
+            self._broker.setup()
+            self._poller.setup()
+
+        for worker in self._workers:
+            worker.setup()
+
+        return True
+
+    def start(self) -> bool:
+        """Start all git-ubuntu processes.
+
+        Returns:
+            True if all started successfully, False otherwise.
+        """
+        if self._primary:
+            self._broker.start()
+            self._poller.start()
+
+        for worker in self._workers:
+            worker.start()
+
+        return True

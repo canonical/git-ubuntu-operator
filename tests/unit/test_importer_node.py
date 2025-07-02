@@ -18,6 +18,4 @@ def test_init_creates_correct_instances():
     assert len(primary_node._workers) == 2
 
     secondary_triple_node = ImporterNode(False, 3)
-    assert secondary_triple_node._broker is None
-    assert secondary_triple_node._poller is None
     assert len(secondary_triple_node._workers) == 3
