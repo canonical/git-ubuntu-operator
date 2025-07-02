@@ -102,6 +102,11 @@ class GitUbuntuCharm(ops.CharmBase):
         if not self._update_lpuser_config():
             return
 
+        # Install sqlite3 if this is the primary node
+        if self._is_primary and not pkgs.sqlite3_install():
+            self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
+            return
+
         # Install git-ubuntu snap
         if not self._update_git_ubuntu_snap():
             return
@@ -115,6 +120,11 @@ class GitUbuntuCharm(ops.CharmBase):
         """Handle updates to config items."""
         # Update lpuser config
         if not self._update_lpuser_config():
+            return
+
+        # Install sqlite3 if this is now the primary node
+        if self._is_primary and not pkgs.sqlite3_install():
+            self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
             return
 
         # Update git-ubuntu snap
