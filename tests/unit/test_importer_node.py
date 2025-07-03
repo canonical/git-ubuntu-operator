@@ -5,6 +5,7 @@
 
 """Unit tests for importer node management."""
 
+from pathlib import Path
 from unittest.mock import patch
 
 from pytest import fixture
@@ -328,3 +329,321 @@ def test_data_directory_broker_fail(
     mock_destroy.assert_called_once_with(destroy_workers=False)
     mock_poller_setup.assert_not_called()
     mock_broker_setup.assert_called_once()
+
+
+@patch("importer_node.GitUbuntuPoller.setup")
+@patch("importer_node.ImporterNode.destroy")
+@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.rmtree")
+@patch("importer_node.Path.exists")
+@patch("importer_node.Path.is_dir")
+@patch("importer_node.Path.mkdir")
+def test_source_directory_update_same_success(
+    mock_mkdir,
+    mock_isdir,
+    mock_exists,
+    mock_rmtree,
+    mock_stop,
+    mock_destroy,
+    mock_poller_setup,
+    default_node,
+):
+    """Test source_directory update attempt with same name."""
+    assert default_node.update_source_directory("/home/ubuntu")
+
+    mock_mkdir.assert_not_called()
+    mock_isdir.assert_not_called()
+    mock_exists.assert_not_called()
+    mock_rmtree.assert_not_called()
+    mock_stop.assert_not_called()
+    mock_destroy.assert_not_called()
+    mock_poller_setup.assert_not_called()
+
+
+@patch("importer_node.GitUbuntuPoller.setup")
+@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.ImporterNode.destroy")
+@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.rmtree")
+@patch("importer_node.Path.exists")
+@patch("importer_node.Path.is_dir")
+@patch("importer_node.Path.mkdir")
+def test_source_directory_update_source_exists_success(
+    mock_mkdir,
+    mock_isdir,
+    mock_exists,
+    mock_rmtree,
+    mock_stop,
+    mock_destroy,
+    mock_clone,
+    mock_poller_setup,
+    default_node,
+):
+    """Test source_directory update attempt when source already exists."""
+    mock_mkdir.side_effect = FileExistsError()
+    mock_stop.return_value = True
+    mock_isdir.return_value = True
+    mock_exists.return_value = True
+    mock_destroy.return_value = True
+    mock_poller_setup.return_value = True
+
+    assert default_node.update_source_directory("/home/user2")
+
+    mock_mkdir.assert_called_once()
+    mock_isdir.assert_called_once()
+    mock_exists.assert_called_once()
+    mock_rmtree.assert_called_once_with(Path("/home/user2/live-allowlist-denylist-source"))
+    mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
+    mock_destroy.assert_called_once_with(destroy_broker=False, destroy_workers=False)
+    mock_poller_setup.assert_called_once()
+
+
+@patch("importer_node.GitUbuntuPoller.setup")
+@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.ImporterNode.destroy")
+@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.rmtree")
+@patch("importer_node.Path.exists")
+@patch("importer_node.Path.is_dir")
+@patch("importer_node.Path.mkdir")
+def test_source_directory_update_directory_exists_success(
+    mock_mkdir,
+    mock_isdir,
+    mock_exists,
+    mock_rmtree,
+    mock_stop,
+    mock_destroy,
+    mock_clone,
+    mock_poller_setup,
+    default_node,
+):
+    """Test source_directory update attempt when the new directory already exists."""
+    mock_mkdir.side_effect = FileExistsError()
+    mock_stop.return_value = True
+    mock_isdir.return_value = True
+    mock_exists.return_value = False
+    mock_clone.return_value = True
+    mock_destroy.return_value = True
+    mock_poller_setup.return_value = True
+
+    assert default_node.update_source_directory("/home/user2")
+
+    mock_mkdir.assert_called_once()
+    mock_isdir.assert_called_once()
+    mock_exists.assert_called_once()
+    mock_rmtree.assert_not_called()
+    mock_clone.assert_called_once()
+    mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
+    mock_destroy.assert_called_once_with(destroy_broker=False, destroy_workers=False)
+    mock_poller_setup.assert_called_once()
+
+
+@patch("importer_node.GitUbuntuPoller.setup")
+@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.ImporterNode.destroy")
+@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.rmtree")
+@patch("importer_node.Path.exists")
+@patch("importer_node.Path.is_dir")
+@patch("importer_node.Path.mkdir")
+def test_source_directory_update_file_exists_fail(
+    mock_mkdir,
+    mock_isdir,
+    mock_exists,
+    mock_rmtree,
+    mock_stop,
+    mock_destroy,
+    mock_clone,
+    mock_poller_setup,
+    default_node,
+):
+    """Test source_directory update attempt when the new directory already exists as file."""
+    mock_mkdir.side_effect = FileExistsError()
+    mock_isdir.return_value = False
+
+    assert not default_node.update_source_directory("/home/user2")
+
+    mock_mkdir.assert_called_once()
+    mock_isdir.assert_called_once()
+    mock_exists.assert_not_called()
+    mock_rmtree.assert_not_called()
+    mock_clone.assert_not_called()
+    mock_stop.assert_not_called()
+    mock_destroy.assert_not_called()
+    mock_poller_setup.assert_not_called()
+
+
+@patch("importer_node.GitUbuntuPoller.setup")
+@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.ImporterNode.destroy")
+@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.rmtree")
+@patch("importer_node.Path.exists")
+@patch("importer_node.Path.is_dir")
+@patch("importer_node.Path.mkdir")
+def test_source_directory_update_permission_fail(
+    mock_mkdir,
+    mock_isdir,
+    mock_exists,
+    mock_rmtree,
+    mock_stop,
+    mock_destroy,
+    mock_clone,
+    mock_poller_setup,
+    default_node,
+):
+    """Test source_directory update attempt with permission error."""
+    mock_mkdir.side_effect = PermissionError()
+
+    assert not default_node.update_source_directory("/home/user2")
+
+    mock_mkdir.assert_called_once()
+    mock_isdir.assert_not_called()
+    mock_exists.assert_not_called()
+    mock_rmtree.assert_not_called()
+    mock_clone.assert_not_called()
+    mock_stop.assert_not_called()
+    mock_destroy.assert_not_called()
+    mock_poller_setup.assert_not_called()
+
+
+@patch("importer_node.GitUbuntuPoller.setup")
+@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.ImporterNode.destroy")
+@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.rmtree")
+@patch("importer_node.Path.exists")
+@patch("importer_node.Path.is_dir")
+@patch("importer_node.Path.mkdir")
+def test_source_directory_update_os_fail(
+    mock_mkdir,
+    mock_isdir,
+    mock_exists,
+    mock_rmtree,
+    mock_stop,
+    mock_destroy,
+    mock_clone,
+    mock_poller_setup,
+    default_node,
+):
+    """Test source_directory update attempt with OS error."""
+    mock_mkdir.side_effect = OSError()
+
+    assert not default_node.update_source_directory("/home/user2")
+
+    mock_mkdir.assert_called_once()
+    mock_isdir.assert_not_called()
+    mock_exists.assert_not_called()
+    mock_rmtree.assert_not_called()
+    mock_clone.assert_not_called()
+    mock_stop.assert_not_called()
+    mock_destroy.assert_not_called()
+    mock_poller_setup.assert_not_called()
+
+
+@patch("importer_node.GitUbuntuPoller.setup")
+@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.ImporterNode.destroy")
+@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.rmtree")
+@patch("importer_node.Path.exists")
+@patch("importer_node.Path.is_dir")
+@patch("importer_node.Path.mkdir")
+def test_source_directory_update_stop_fail(
+    mock_mkdir,
+    mock_isdir,
+    mock_exists,
+    mock_rmtree,
+    mock_stop,
+    mock_destroy,
+    mock_clone,
+    mock_poller_setup,
+    default_node,
+):
+    """Test source_directory update attempt when git-ubuntu stop fails."""
+    mock_stop.return_value = False
+
+    assert not default_node.update_source_directory("/home/user2")
+
+    mock_mkdir.assert_called_once()
+    mock_isdir.assert_not_called()
+    mock_exists.assert_not_called()
+    mock_rmtree.assert_not_called()
+    mock_clone.assert_not_called()
+    mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
+    mock_destroy.assert_not_called()
+    mock_poller_setup.assert_not_called()
+
+
+@patch("importer_node.GitUbuntuPoller.setup")
+@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.ImporterNode.destroy")
+@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.rmtree")
+@patch("importer_node.Path.exists")
+@patch("importer_node.Path.is_dir")
+@patch("importer_node.Path.mkdir")
+def test_source_directory_update_rmtree_fail(
+    mock_mkdir,
+    mock_isdir,
+    mock_exists,
+    mock_rmtree,
+    mock_stop,
+    mock_destroy,
+    mock_clone,
+    mock_poller_setup,
+    default_node,
+):
+    """Test source_directory update attempt when rmtree fails."""
+    mock_mkdir.side_effect = FileExistsError()
+    mock_stop.return_value = True
+    mock_isdir.return_value = True
+    mock_exists.return_value = True
+    mock_rmtree.side_effect = OSError()
+
+    assert not default_node.update_source_directory("/home/user2")
+
+    mock_mkdir.assert_called_once()
+    mock_isdir.assert_called_once()
+    mock_exists.assert_called_once()
+    mock_rmtree.assert_called_once()
+    mock_clone.assert_not_called()
+    mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
+    mock_destroy.assert_not_called()
+    mock_poller_setup.assert_not_called()
+
+
+@patch("importer_node.GitUbuntuPoller.setup")
+@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.ImporterNode.destroy")
+@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.rmtree")
+@patch("importer_node.Path.exists")
+@patch("importer_node.Path.is_dir")
+@patch("importer_node.Path.mkdir")
+def test_source_directory_update_clone_fail(
+    mock_mkdir,
+    mock_isdir,
+    mock_exists,
+    mock_rmtree,
+    mock_stop,
+    mock_destroy,
+    mock_clone,
+    mock_poller_setup,
+    default_node,
+):
+    """Test source_directory update attempt when git-ubuntu source clone fails."""
+    mock_stop.return_value = True
+    mock_exists.return_value = False
+    mock_clone.return_value = False
+
+    assert not default_node.update_source_directory("/home/user2")
+
+    mock_mkdir.assert_called_once()
+    mock_isdir.assert_not_called()
+    mock_exists.assert_called_once()
+    mock_rmtree.assert_not_called()
+    mock_clone.assert_called_once_with(Path("/home/user2"))
+    mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
+    mock_destroy.assert_not_called()
+    mock_poller_setup.assert_not_called()

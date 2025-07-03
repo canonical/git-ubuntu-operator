@@ -5,8 +5,9 @@
 """Manager of files and git-ubuntu instances on the local system."""
 
 import logging
+from os import system
 from pathlib import Path
-from shutil import move
+from shutil import move, rmtree
 
 from git_ubuntu import GitUbuntuBroker, GitUbuntuPoller, GitUbuntuWorker
 
@@ -37,6 +38,33 @@ class ImporterNode:
 
         self._data_dir = data_directory
         self._source_dir = source_directory
+
+        self._git_ubuntu_source_url = "https://git.launchpad.net/git-ubuntu"
+        self._git_ubuntu_source_subdir = "live-allowlist-denylist-source"
+
+    def _clone_git_ubuntu_source(self, directory: Path) -> bool:
+        """Clone the git-ubuntu git repo to a given directory.
+
+        Returns:
+            True if the clone succeeded, False otherwise.
+        """
+        if not directory.is_dir():
+            logger.error(
+                "Failed to clone git-ubuntu sources: %s is not a valid directory.", directory
+            )
+            return False
+
+        clone_dir = directory / self._git_ubuntu_source_subdir
+        logger.info("Cloning git-ubuntu source to %s", clone_dir)
+        result = system(f"git clone {self._git_ubuntu_source_url} {clone_dir}")
+
+        if result != 0:
+            logger.error(
+                "Failed to clone git-ubuntu source, process exited with result %d.", result
+            )
+            return False
+
+        return True
 
     def install(self) -> bool:
         """Set up database and denylist if primary, and run git-ubuntu instance setup.
@@ -184,15 +212,88 @@ class ImporterNode:
             )
         elif old_db_file.exists():
             logger.info("Moving database from %s to %s.", self._data_dir, data_directory)
-            move(old_db_file, new_db_file)
-
-        # Update poller and broker configs to match new directory.
-        if not self.destroy(destroy_workers=False):
-            return False
+            try:
+                move(old_db_file, new_db_file)
+            except OSError as e:
+                logger.error("Failed to move database: %s", e)
+                return False
 
         self._data_dir = data_directory
 
-        if not self._broker.setup() or not self._poller.setup():
+        # Update poller and broker configs to match new directory.
+        if (
+            not self.destroy(destroy_workers=False)
+            or not self._broker.setup()
+            or not self._poller.setup()
+        ):
             return False
 
+        return True
+
+    def update_source_directory(self, source_directory: str) -> bool:
+        """Update the source directory location, notify git-ubuntu, and re-clone source.
+
+        Args:
+            source_directory: The new source directory location.
+
+        Returns:
+            True if new source directory setup succeeded, False otherwise.
+        """
+        # Ignore request if secondary node or source directory name has not changed.
+        if not self._primary or source_directory == self._source_dir:
+            return True
+
+        new_dir = Path(source_directory)
+        new_dir_success = False
+
+        # Create directory if it does not yet exist
+        try:
+            new_dir.mkdir(parents=True)
+            logger.info("Created new source directory %s.", source_directory)
+            new_dir_success = True
+        except FileExistsError:
+            if new_dir.is_dir():
+                logger.info("Source directory %s already exists.", source_directory)
+                new_dir_success = True
+            else:
+                logger.error(
+                    "Source directory location %s already exists as a file.", source_directory
+                )
+        except PermissionError:
+            logger.error(
+                "Unable to create new source directory %s: permission denied.", source_directory
+            )
+        except OSError as e:
+            logger.error("Unable to create new source directory %s: %s", source_directory, e)
+
+        if not new_dir_success:
+            return False
+
+        # Confirm the poller is shut down
+        if not self.stop(stop_broker=False, stop_workers=False):
+            return False
+
+        # Clear out any existing files where the source is to be cloned
+        new_clone_dir = new_dir / self._git_ubuntu_source_subdir
+
+        if new_clone_dir.exists():
+            try:
+                rmtree(new_clone_dir)
+            except OSError as e:
+                logger.error(
+                    "Failed to remove existing files in new source directory %s: %s.",
+                    source_directory,
+                    e,
+                )
+                return False
+
+        # Clone the source, then update poller config with new directory.
+        if (
+            not self._clone_git_ubuntu_source(new_dir)
+            or not self.destroy(destroy_broker=False, destroy_workers=False)
+            or not self._poller.setup()
+        ):
+            return False
+
+        self._source_dir = source_directory
         return True

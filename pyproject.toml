@@ -65,3 +65,8 @@ skip = "build,lib,venv,icon.svg,.tox,.git,.mypy_cache,.ruff_cache,.coverage"
 
 [tool.pyright]
 include = ["src/**.py"]
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+    "too-many-instance-attributes"
+]
