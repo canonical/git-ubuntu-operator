@@ -50,3 +50,16 @@ config:
         instances.
       default: True
       type: boolean
+    data_directory:
+      description: |
+        The directory to store state information in, including the sqlite
+        database for broker-poller interactions. This setting is only
+        relevant when primary is True.
+      default: "/var/local/git-ubuntu"
+      type: string
+    source_directory:
+      description: |
+        The directory to download the git-ubuntu source in. The included source
+        is used to provide the package denylist to the poller.
+      default: "/home/ubuntu"
+      type: string

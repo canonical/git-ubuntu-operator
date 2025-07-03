@@ -63,6 +63,14 @@ class GitUbuntuCharm(ops.CharmBase):
             return num_workers
         return 0
 
+    @property
+    def _data_directory(self) -> str:
+        return str(self.config.get("data_directory"))
+
+    @property
+    def _source_directory(self) -> str:
+        return str(self.config.get("source_directory"))
+
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
         self.unit.status = ops.ActiveStatus()
