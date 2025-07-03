@@ -43,6 +43,14 @@ class GitUbuntuCharm(ops.CharmBase):
         self._git_ubuntu_importer_node = None
 
     @property
+    def _git_ubuntu_snap_channel(self) -> str:
+        return str(self.config.get("channel"))
+
+    @property
+    def _lp_username(self) -> str:
+        return str(self.config.get("lpuser"))
+
+    @property
     def _is_primary(self) -> bool:
         if self.config.get("primary"):
             return True
@@ -61,7 +69,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _update_lpuser_config(self) -> bool:
         """Attempt to update git config with the new Launchpad User ID."""
-        lpuser = str(self.config.get("lpuser"))
+        lpuser = self._lp_username
         if lp.is_valid_lp_username(lpuser):
             if not pkgs.git_update_lpuser_config(lpuser):
                 self.unit.status = ops.BlockedStatus("Failed to update lpuser config.")
@@ -78,7 +86,7 @@ class GitUbuntuCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("Updating git-ubuntu snap")
 
         # Confirm the channel is valid.
-        channel = str(self.config.get("channel"))
+        channel = self._git_ubuntu_snap_channel
         if channel not in ("beta", "edge", "stable"):
             self.unit.status = ops.BlockedStatus("Invalid channel configured.")
             return False
