@@ -4,10 +4,13 @@
 
 """Snap and Apt package configuration and management functions."""
 
+import logging
 from os import system
 
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v2 import snap
+
+logger = logging.getLogger(__name__)
 
 
 def git_update_lpuser_config(lp_username: str) -> bool:
@@ -34,7 +37,8 @@ def git_install() -> bool:
     try:
         apt.update()
         apt.add_package("git")
-    except apt.PackageError:
+    except apt.PackageError as e:
+        logger.error("Failed to install git from apt: %s", e)
         return False
 
     return True
@@ -49,7 +53,8 @@ def sqlite3_install() -> bool:
     try:
         apt.update()
         apt.add_package("sqlite3")
-    except apt.PackageError:
+    except apt.PackageError as e:
+        logger.error("Failed to install sqlite3 from apt: %s", e)
         return False
 
     return True
@@ -68,7 +73,8 @@ def git_ubuntu_snap_refresh(channel: str) -> bool:
         cache = snap.SnapCache()
         git_ubuntu_snap = cache["git-ubuntu"]
         git_ubuntu_snap.ensure(snap.SnapState.Latest, classic=True, channel=channel)
-    except snap.SnapError:
+    except snap.SnapError as e:
+        logger.error("Failed to refresh git-ubuntu snap to channel %s: %s", channel, e)
         return False
 
     return True
