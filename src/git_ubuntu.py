@@ -12,17 +12,37 @@ class GitUbuntu:
         """Initialize the git-ubuntu instance."""
         self._service_file = None
 
-    def setup(self) -> None:
-        """Set up an instance of git-ubuntu with a systemd service file."""
+    def setup(self) -> bool:
+        """Set up an instance of git-ubuntu with a systemd service file.
 
-    def start(self) -> None:
-        """Start the git-ubuntu instance with systemd."""
+        Returns:
+            True if setup succeeded, False otherwise.
+        """
+        return True
 
-    def stop(self) -> None:
-        """Stop the git-ubuntu instance."""
+    def start(self) -> bool:
+        """Start the git-ubuntu instance with systemd.
 
-    def destroy(self) -> None:
-        """Destroy the instance and its service file."""
+        Returns:
+            True if systemd start was successful, False otherwise.
+        """
+        return True
+
+    def stop(self) -> bool:
+        """Stop the git-ubuntu instance.
+
+        Returns:
+            True if systemd stop was successful, False otherwise.
+        """
+        return True
+
+    def destroy(self) -> bool:
+        """Destroy the instance and its service file.
+
+        Returns:
+            True if the instance and file were removed, False otherwise.
+        """
+        return True
 
 
 class GitUbuntuBroker(GitUbuntu):
@@ -32,9 +52,14 @@ class GitUbuntuBroker(GitUbuntu):
     nodes to import them.
     """
 
-    def setup(self) -> None:
-        """Obtain necessary files for running the broker."""
+    def setup(self) -> bool:
+        """Obtain necessary files for running the broker.
+
+        Returns:
+            True if setup succeeded, False otherwise.
+        """
         # Get allow/denylist from git
+        return True
 
 
 class GitUbuntuPoller(GitUbuntu):
