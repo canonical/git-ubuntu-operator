@@ -68,5 +68,7 @@ include = ["src/**.py"]
 
 [tool.pylint."MESSAGES CONTROL"]
 disable = [
-    "too-many-instance-attributes"
+    "too-many-instance-attributes",
+    "too-many-arguments",
+    "too-many-positional-arguments"
 ]
