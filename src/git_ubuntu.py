@@ -4,6 +4,9 @@
 
 """Git Ubuntu service runner and configurator."""
 
+import abc
+from pathlib import Path
+
 
 def generate_systemd_service_string(
     description: str,
@@ -14,7 +17,9 @@ def generate_systemd_service_string(
     service_restart: str | None = None,
     restart_sec: int | None = None,
     timeout_start_sec: int | None = None,
+    timeout_abort_sec: int | None = None,
     watchdog_sec: int | None = None,
+    watchdog_signal: str | None = None,
     runtime_dir: str | None = None,
     private_tmp: bool | None = None,
     environment: str | None = None,
@@ -31,8 +36,10 @@ def generate_systemd_service_string(
         service_restart: How to restart the service after exit.
         restart_sec: The restart delay in seconds.
         timeout_start_sec: The start timeout limit in seconds.
+        timeout_abort_sec: Time to force terminate on abort.
         watchdog_sec: The watchdog trigger time in seconds.
-        runtime_dir: The active directory during runtime.
+        watchdog_signal: The watchdog termination signal.
+        runtime_dir: Writable runtime directory to create.
         private_tmp: Provide a private tmp area for the service.
         environment: Environment variables set for this process.
         wanted_by: List of weak dependencies on this unit.
@@ -60,8 +67,14 @@ def generate_systemd_service_string(
     if timeout_start_sec is not None:
         service_lines.append(f"TimeoutStartSec={timeout_start_sec}")
 
+    if timeout_abort_sec is not None:
+        service_lines.append(f"TimeoutAbortSec={timeout_abort_sec}")
+
     if watchdog_sec is not None:
         service_lines.append(f"WatchdogSec={watchdog_sec}")
+
+    if watchdog_signal is not None:
+        service_lines.append(f"WatchdogSignal={watchdog_signal}")
 
     if runtime_dir is not None:
         service_lines.append(f"RuntimeDirectory={runtime_dir}")
@@ -80,20 +93,41 @@ def generate_systemd_service_string(
     return "\n".join(service_lines)
 
 
+def create_systemd_service_file(filename: str, file_content: str) -> bool:
+    """Create a systemd service file in the service files directory.
+
+    Args:
+        filename: The name of the service file to create.
+        file_content: The content of the service file.
+
+    Returns:
+        True if the file was created, False otherwise.
+    """
+    try:
+        with open(Path("/etc/systemd/system") / filename, "w") as f:
+            f.write(file_content)
+    except Exception:
+        return False
+    return True
+
+
 class GitUbuntu:
-    """An instance of git-ubuntu."""
+    """Abstract git-ubuntu importer runner class."""
+
+    __metaclass__ = abc.ABCMeta
 
     def __init__(self) -> None:
         """Initialize the git-ubuntu instance."""
-        self._service_file = None
+        self._service_file = ""
 
-    def setup(self) -> bool:
+    @abc.abstractmethod
+    def setup(self, user: str, group: str) -> bool:
         """Set up an instance of git-ubuntu with a systemd service file.
 
         Returns:
             True if setup succeeded, False otherwise.
         """
-        return True
+        return False
 
     def start(self) -> bool:
         """Start the git-ubuntu instance with systemd.
@@ -127,14 +161,42 @@ class GitUbuntuBroker(GitUbuntu):
     nodes to import them.
     """
 
-    def setup(self) -> bool:
+    def setup(
+        self,
+        user: str,
+        group: str,
+        broker_port: int = 1692,
+    ) -> bool:
         """Obtain necessary files for running the broker.
+
+        Args:
+            user: The user to run the service as.
+            group: The permissions group to run the service as.
+            broker_port: The network port to provide tasks to workers on.
 
         Returns:
             True if setup succeeded, False otherwise.
         """
-        # Get allow/denylist from git
-        return True
+        filename = "git-ubuntu-importer-service-broker.service"
+        exec_start = f"/snap/bin/git-ubuntu importer-service-broker tcp://*:{broker_port}"
+
+        service_string = generate_systemd_service_string(
+            "git-ubuntu importer service broker",
+            user,
+            group,
+            "simple",
+            exec_start,
+            service_restart="always",
+            environment="PYTHONUNBUFFERED=1",
+            runtime_dir="git-ubuntu",
+            wanted_by="multi-user.target",
+        )
+
+        if create_systemd_service_file(filename, service_string):
+            self._service_file = filename
+            return True
+
+        return False
 
 
 class GitUbuntuPoller(GitUbuntu):
@@ -144,6 +206,54 @@ class GitUbuntuPoller(GitUbuntu):
     updates. If so, it queues imports for allowed packages.
     """
 
+    def setup(
+        self,
+        user: str,
+        group: str,
+        denylist: Path = Path(
+            "/home/ubuntu/live-allowlist-denylist-source/gitubuntu/source-package-denylist.txt"
+        ),
+        proxy: str = "",
+    ) -> bool:
+        """Set up worker systemd file with designated worker name.
+
+        Args:
+            user: The user to run the service as.
+            group: The permissions group to run the service as.
+            denylist: The location of the package denylist.
+            proxy: Optional proxy url.
+
+        Returns:
+            True if setup succeeded, False otherwise.
+        """
+        filename = "git-ubuntu-importer-service-poller.service"
+        exec_start = f"/snap/bin/git-ubuntu importer-service-poller --denylist {denylist}"
+
+        environment = "PYTHONUNBUFFERED=1"
+
+        if proxy:
+            environment = f"http_proxy={proxy} " + environment
+
+        service_string = generate_systemd_service_string(
+            "git-ubuntu importer service poller",
+            user,
+            group,
+            "notify",
+            exec_start,
+            timeout_start_sec=1200,
+            service_restart="always",
+            restart_sec=60,
+            watchdog_sec=86400,
+            environment=environment,
+            wanted_by="multi-user.target",
+        )
+
+        if create_systemd_service_file(filename, service_string):
+            self._service_file = filename
+            return True
+
+        return False
+
 
 class GitUbuntuWorker(GitUbuntu):
     """An instance of git-ubuntu running as a worker node.
@@ -152,10 +262,42 @@ class GitUbuntuWorker(GitUbuntu):
     upload a git tree corresponding to them.
     """
 
-    def setup(self) -> bool:
+    def setup(
+        self,
+        user: str,
+        group: str,
+        worker_name: str = "",
+        broker_ip: str = "127.0.0.1",
+        broker_port: int = 1692,
+    ) -> bool:
         """Set up worker systemd file with designated worker name.
 
         Returns:
             True if setup succeeded, False otherwise.
         """
-        return True
+        filename = f"git-ubuntu-importer-service-worker{worker_name}.service"
+        exec_start = (
+            f"/snap/bin/git-ubuntu importer-service-worker %i tcp://{broker_ip}:{broker_port}"
+        )
+
+        service_string = generate_systemd_service_string(
+            "git-ubuntu importer service worker",
+            user,
+            group,
+            "notify",
+            exec_start,
+            service_restart="always",
+            restart_sec=60,
+            watchdog_sec=259200,
+            timeout_abort_sec=600,
+            watchdog_signal="SIGINT",
+            private_tmp=True,
+            environment="PYTHONUNBUFFERED=1",
+            wanted_by="multi-user.target",
+        )
+
+        if create_systemd_service_file(filename, service_string):
+            self._service_file = filename
+            return True
+
+        return False

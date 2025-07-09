@@ -5,7 +5,15 @@
 
 """Unit tests for git-ubuntu instance classes."""
 
-from git_ubuntu import generate_systemd_service_string
+from pathlib import Path
+from unittest.mock import patch
+
+from git_ubuntu import (
+    GitUbuntuBroker,
+    GitUbuntuPoller,
+    GitUbuntuWorker,
+    generate_systemd_service_string,
+)
 
 
 def test_generate_systemd_service_string_10():
@@ -464,3 +472,130 @@ Environment=PYTHONUNBUFFERED=1
 WantedBy=multi-user.target"""
 
     assert result == expected_output
+
+
+@patch("git_ubuntu.create_systemd_service_file")
+def test_git_ubuntu_broker_setup_success(mock_create_file):
+    """Test GitUbuntuBroker setup with default parameters."""
+    mock_create_file.return_value = True
+    broker = GitUbuntuBroker()
+
+    result = broker.setup("ubuntu", "testgroup")
+
+    assert result is True
+    assert broker._service_file == "git-ubuntu-importer-service-broker.service"
+    mock_create_file.assert_called_once()
+
+
+@patch("git_ubuntu.create_systemd_service_file")
+def test_git_ubuntu_broker_setup_custom_port(mock_create_file):
+    """Test GitUbuntuBroker setup with custom broker port."""
+    mock_create_file.return_value = True
+    broker = GitUbuntuBroker()
+
+    result = broker.setup("ubuntu", "testgroup", broker_port=8080)
+
+    assert result is True
+    mock_create_file.assert_called_once()
+
+
+@patch("git_ubuntu.create_systemd_service_file")
+def test_git_ubuntu_broker_setup_failure(mock_create_file):
+    """Test GitUbuntuBroker setup when file creation fails."""
+    mock_create_file.return_value = False
+    broker = GitUbuntuBroker()
+
+    result = broker.setup("ubuntu", "testgroup")
+
+    assert result is False
+    assert broker._service_file == ""
+
+
+@patch("git_ubuntu.create_systemd_service_file")
+def test_git_ubuntu_poller_setup_success(mock_create_file):
+    """Test GitUbuntuPoller setup with default parameters."""
+    mock_create_file.return_value = True
+    poller = GitUbuntuPoller()
+
+    result = poller.setup("ubuntu", "testgroup")
+
+    assert result is True
+    assert poller._service_file == "git-ubuntu-importer-service-poller.service"
+    mock_create_file.assert_called_once()
+
+
+@patch("git_ubuntu.create_systemd_service_file")
+def test_git_ubuntu_poller_setup_custom_denylist(mock_create_file):
+    """Test GitUbuntuPoller setup with custom denylist path."""
+    mock_create_file.return_value = True
+    poller = GitUbuntuPoller()
+    custom_denylist = Path("/custom/path/denylist.txt")
+
+    result = poller.setup("ubuntu", "testgroup", denylist=custom_denylist)
+
+    assert result is True
+    mock_create_file.assert_called_once()
+
+
+@patch("git_ubuntu.create_systemd_service_file")
+def test_git_ubuntu_poller_setup_with_proxy(mock_create_file):
+    """Test GitUbuntuPoller setup with proxy configuration."""
+    mock_create_file.return_value = True
+    poller = GitUbuntuPoller()
+
+    result = poller.setup("ubuntu", "testgroup", proxy="http://proxy.example.com:8080")
+
+    assert result is True
+    mock_create_file.assert_called_once()
+
+
+@patch("git_ubuntu.create_systemd_service_file")
+def test_git_ubuntu_poller_setup_failure(mock_create_file):
+    """Test GitUbuntuPoller setup when file creation fails."""
+    mock_create_file.return_value = False
+    poller = GitUbuntuPoller()
+
+    result = poller.setup("ubuntu", "testgroup")
+
+    assert result is False
+    assert poller._service_file == ""
+
+
+@patch("git_ubuntu.create_systemd_service_file")
+def test_git_ubuntu_worker_setup_success(mock_create_file):
+    """Test GitUbuntuWorker setup with default parameters."""
+    mock_create_file.return_value = True
+    worker = GitUbuntuWorker()
+
+    result = worker.setup("ubuntu", "testgroup")
+
+    assert result is True
+    assert worker._service_file == "git-ubuntu-importer-service-worker.service"
+    mock_create_file.assert_called_once()
+
+
+@patch("git_ubuntu.create_systemd_service_file")
+def test_git_ubuntu_worker_setup_custom_params(mock_create_file):
+    """Test GitUbuntuWorker setup with custom parameters."""
+    mock_create_file.return_value = True
+    worker = GitUbuntuWorker()
+
+    result = worker.setup(
+        "ubuntu", "testgroup", worker_name="1_2", broker_ip="192.168.1.100", broker_port=9000
+    )
+
+    assert result is True
+    assert worker._service_file == "git-ubuntu-importer-service-worker1_2.service"
+    mock_create_file.assert_called_once()
+
+
+@patch("git_ubuntu.create_systemd_service_file")
+def test_git_ubuntu_worker_setup_failure(mock_create_file):
+    """Test GitUbuntuWorker setup when file creation fails."""
+    mock_create_file.return_value = False
+    worker = GitUbuntuWorker()
+
+    result = worker.setup("ubuntu", "testgroup")
+
+    assert result is False
+    assert worker._service_file == ""
