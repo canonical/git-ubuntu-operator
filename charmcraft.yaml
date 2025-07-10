@@ -27,10 +27,29 @@ charm-libs:
 
 config:
   options:
+    controller_ip:
+      description: |
+        The IP or network location of the primary node. This option is ignored
+        for the primary node.
+      default: "127.0.0.1"
+      type: string
+    controller_port:
+      description: |
+        The network port on the primary node used for import assignments, must
+        be consistent across nodes.
+      default: 1692
+      type: int
     channel:
       description: |
         Channel for the git-ubuntu snap.
       default: "beta"
+      type: string
+    data_directory:
+      description: |
+        The directory to store state information in, including the sqlite
+        database for broker-poller interactions. This setting is only
+        relevant when primary is True.
+      default: "/var/local/git-ubuntu"
       type: string
     lpuser:
       description: |
@@ -38,10 +57,10 @@ config:
         This user must be a member of ~git-ubuntu-import.
       default: "git-ubuntu-bot"
       type: string
-    workers:
+    node_id:
       description: |
-        The number of git-ubuntu worker processes to maintain.
-      default: 2
+        The ID of this git-ubuntu operator node, must be unique in the network.
+      default: 0
       type: int
     primary:
       description: |
@@ -50,16 +69,20 @@ config:
         instances.
       default: True
       type: boolean
-    data_directory:
-      description: |
-        The directory to store state information in, including the sqlite
-        database for broker-poller interactions. This setting is only
-        relevant when primary is True.
-      default: "/var/local/git-ubuntu"
-      type: string
     source_directory:
       description: |
         The directory to download the git-ubuntu source in. The included source
-        is used to provide the package denylist to the poller.
+        is used to provide the package denylist to the poller. This option is
+        ignored for secondary nodes.
       default: "/home/ubuntu"
       type: string
+    system_user:
+      description: |
+        The system user to run systemd services as.
+      default: "ubuntu"
+      type: string
+    workers:
+      description: |
+        The number of git-ubuntu worker processes to maintain.
+      default: 2
+      type: int
