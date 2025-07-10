@@ -152,10 +152,21 @@ class GitUbuntuCharm(ops.CharmBase):
         # Initialize git-ubuntu instance manager
         if self._is_primary:
             self._git_ubuntu_importer_node = PrimaryImporterNode(
-                self._num_workers, self._data_directory, self._source_directory
+                self._node_id,
+                self._num_workers,
+                self._system_username,
+                self._controller_port,
+                self._data_directory,
+                self._source_directory,
             )
         else:
-            self._git_ubuntu_importer_node = ImporterNode(self._num_workers)
+            self._git_ubuntu_importer_node = ImporterNode(
+                self._node_id,
+                self._num_workers,
+                self._system_username,
+                self._controller_port,
+                self._controller_ip,
+            )
 
         self.unit.status = ops.ActiveStatus("Ready")
 

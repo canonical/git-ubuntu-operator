@@ -17,7 +17,7 @@ from importer_node import ImporterNode, PrimaryImporterNode
 @fixture
 def default_node():
     """Create a node with default settings."""
-    return PrimaryImporterNode(2, "/var/local/git-ubuntu", "/home/ubuntu")
+    return PrimaryImporterNode(0, 2, "ubuntu", 1692, "/var/local/git-ubuntu", "/home/ubuntu")
 
 
 def test_init_creates_correct_instances(default_node):
@@ -26,7 +26,7 @@ def test_init_creates_correct_instances(default_node):
     assert isinstance(default_node._poller, GitUbuntuPoller)
     assert len(default_node._workers) == 2
 
-    secondary_triple_node = ImporterNode(3)
+    secondary_triple_node = ImporterNode(1, 3, "ubuntu", 1692, "192.168.1.2")
     assert len(secondary_triple_node._workers) == 3
 
 

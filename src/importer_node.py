@@ -17,12 +17,22 @@ logger = logging.getLogger(__name__)
 class ImporterNode:
     """Manager of git-ubuntu workers on this system."""
 
-    def __init__(self, num_workers: int):
+    def __init__(
+        self, node_id: int, num_workers: int, system_user: str, primary_port: int, primary_ip: str
+    ):
         """Initialize git-ubuntu instance and local file variables.
 
         Args:
+            node_id: The unique ID of this node.
             num_workers: The number of worker instances to set up.
+            system_user: The user + group to run the services as.
+            primary_port: The network port used for worker assignments.
+            primary_ip: The IP or network location of the primary node.
         """
+        self._node_id = node_id
+        self._user = system_user
+        self._port = primary_port
+        self._primary_ip = primary_ip
         self._workers = [GitUbuntuWorker() for _ in range(num_workers)]
 
     def install(self) -> bool:
@@ -77,11 +87,23 @@ class ImporterNode:
 class PrimaryImporterNode(ImporterNode):
     """Manager of git-ubuntu importer components on the primary node's system."""
 
-    def __init__(self, num_workers: int, data_directory: str, source_directory: str):
+    def __init__(
+        self,
+        node_id: int,
+        num_workers: int,
+        system_user: str,
+        primary_port: int,
+        data_directory: str,
+        source_directory: str,
+    ):
         """Initialize git-ubuntu instance and local file variables.
 
         Args:
+            node_id: The unique ID of this node.
             num_workers: The number of worker instances to set up.
+            system_user: The user + group to run the services as.
+            primary_port: The network port used for worker assignments.
+            primary_ip: The IP or network location of the primary node.
             data_directory: The database and state info directory location.
             source_directory: The directory to keep the git-ubuntu source in.
         """
@@ -94,7 +116,7 @@ class PrimaryImporterNode(ImporterNode):
         self._git_ubuntu_source_url = "https://git.launchpad.net/git-ubuntu"
         self._git_ubuntu_source_subdir = "live-allowlist-denylist-source"
 
-        super().__init__(num_workers)
+        super().__init__(node_id, num_workers, system_user, primary_port, "127.0.0.1")
 
     def _clone_git_ubuntu_source(self, directory: Path) -> bool:
         """Clone the git-ubuntu git repo to a given directory.
