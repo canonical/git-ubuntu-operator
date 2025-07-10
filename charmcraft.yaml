@@ -24,6 +24,8 @@ charm-libs:
     version: "0"
   - lib: operator-libs-linux.snap
     version: "2"
+  - lib: operator_libs_linux.systemd
+    version: "1"
 
 config:
   options:
