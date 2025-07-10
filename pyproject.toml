@@ -70,5 +70,6 @@ include = ["src/**.py"]
 disable = [
     "too-many-instance-attributes",
     "too-many-arguments",
-    "too-many-positional-arguments"
+    "too-many-positional-arguments",
+    "too-many-locals"
 ]

@@ -104,9 +104,9 @@ def create_systemd_service_file(filename: str, file_content: str) -> bool:
         True if the file was created, False otherwise.
     """
     try:
-        with open(Path("/etc/systemd/system") / filename, "w") as f:
+        with open(Path("/etc/systemd/system") / filename, "w", encoding="utf-8") as f:
             f.write(file_content)
-    except Exception:
+    except (FileNotFoundError, PermissionError, IOError):
         return False
     return True
 
@@ -124,10 +124,10 @@ class GitUbuntu:
     def setup(self, user: str, group: str) -> bool:
         """Set up an instance of git-ubuntu with a systemd service file.
 
-        Returns:
-            True if setup succeeded, False otherwise.
+        Args:
+            user: The user to run the service as.
+            group: The permissions group to run the service as.
         """
-        return False
 
     def start(self) -> bool:
         """Start the git-ubuntu instance with systemd.
@@ -271,6 +271,13 @@ class GitUbuntuWorker(GitUbuntu):
         broker_port: int = 1692,
     ) -> bool:
         """Set up worker systemd file with designated worker name.
+
+        Args:
+            user: The user to run the service as.
+            group: The permissions group to run the service as.
+            worker_name: The unique worker ID to add to the service filename.
+            broker_ip: The IP address of the broker process' node.
+            broker_port: The network port that the broker provides tasks on.
 
         Returns:
             True if setup succeeded, False otherwise.
