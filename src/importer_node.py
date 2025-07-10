@@ -41,8 +41,10 @@ class ImporterNode:
         Returns:
             True if installation succeeded, False otherwise.
         """
-        for worker in self._workers:
-            if not worker.setup():
+        for i, worker in enumerate(self._workers):
+            if not worker.setup(
+                self._user, self._user, f"{self._node_id}_{i}", self._primary_ip, self._port
+            ):
                 return False
 
         return True
@@ -103,7 +105,6 @@ class PrimaryImporterNode(ImporterNode):
             num_workers: The number of worker instances to set up.
             system_user: The user + group to run the services as.
             primary_port: The network port used for worker assignments.
-            primary_ip: The IP or network location of the primary node.
             data_directory: The database and state info directory location.
             source_directory: The directory to keep the git-ubuntu source in.
         """
@@ -148,9 +149,15 @@ class PrimaryImporterNode(ImporterNode):
         Returns:
             True if installation succeeded, False otherwise.
         """
-        if not self._broker.setup():
+        if not self._broker.setup(self._user, self._user, self._port):
             return False
-        if not self._poller.setup():
+        if not self._poller.setup(
+            self._user,
+            self._user,
+            Path(self._source_dir)
+            / self._git_ubuntu_source_subdir
+            / "gitubuntu/source-package-denylist.txt",
+        ):
             return False
         if not super().install():
             return False
@@ -285,8 +292,14 @@ class PrimaryImporterNode(ImporterNode):
         # Update poller and broker configs to match new directory.
         if (
             not self.destroy(destroy_workers=False)
-            or not self._broker.setup()
-            or not self._poller.setup()
+            or not self._broker.setup(self._user, self._user, self._port)
+            or not self._poller.setup(
+                self._user,
+                self._user,
+                Path(self._source_dir)
+                / self._git_ubuntu_source_subdir
+                / "gitubuntu/source-package-denylist.txt",
+            )
         ):
             return False
 
@@ -353,7 +366,13 @@ class PrimaryImporterNode(ImporterNode):
         if (
             not self._clone_git_ubuntu_source(new_dir)
             or not self.destroy(destroy_broker=False, destroy_workers=False)
-            or not self._poller.setup()
+            or not self._poller.setup(
+                self._user,
+                self._user,
+                Path(self._source_dir)
+                / self._git_ubuntu_source_subdir
+                / "gitubuntu/source-package-denylist.txt",
+            )
         ):
             return False
 
