@@ -5,7 +5,12 @@
 """Git Ubuntu service runner and configurator."""
 
 import abc
+import logging
 from pathlib import Path
+
+from service_management import daemon_reload, start_service, stop_service
+
+logger = logging.getLogger(__name__)
 
 
 def generate_systemd_service_string(
@@ -106,7 +111,8 @@ def create_systemd_service_file(filename: str, file_content: str) -> bool:
     try:
         with open(Path("/etc/systemd/system") / filename, "w", encoding="utf-8") as f:
             f.write(file_content)
-    except (FileNotFoundError, PermissionError, IOError):
+    except (FileNotFoundError, PermissionError, IOError) as e:
+        logger.error("Failed to create service file %s: %s", filename, str(e))
         return False
     return True
 
@@ -119,6 +125,7 @@ class GitUbuntu:
     def __init__(self) -> None:
         """Initialize the git-ubuntu instance."""
         self._service_file = ""
+        self._started = False
 
     @abc.abstractmethod
     def setup(self, user: str, group: str) -> bool:
@@ -135,7 +142,12 @@ class GitUbuntu:
         Returns:
             True if systemd start was successful, False otherwise.
         """
-        return True
+        if start_service(self._service_file):
+            self._started = True
+            return True
+
+        logger.error("Failed to start %s", self._service_file)
+        return False
 
     def stop(self) -> bool:
         """Stop the git-ubuntu instance.
@@ -143,14 +155,35 @@ class GitUbuntu:
         Returns:
             True if systemd stop was successful, False otherwise.
         """
-        return True
+        if stop_service(self._service_file):
+            self._started = False
+            return True
+
+        logger.error("Failed to stop %s", self._service_file)
+        return False
 
     def destroy(self) -> bool:
         """Destroy the instance and its service file.
 
+        Make sure the service is stopped prior to destruction.
+
         Returns:
             True if the instance and file were removed, False otherwise.
         """
+        if self._started and not self.stop():
+            return False
+
+        try:
+            Path(f"/etc/systemd/system/{self._service_file}").unlink(missing_ok=True)
+        except (PermissionError, IOError, OSError) as e:
+            logger.error("Failed to remove service file %s: %s", self._service_file, str(e))
+            return False
+
+        self._service_file = ""
+
+        if not daemon_reload():
+            return False
+
         return True
 
 
@@ -167,7 +200,7 @@ class GitUbuntuBroker(GitUbuntu):
         group: str,
         broker_port: int = 1692,
     ) -> bool:
-        """Obtain necessary files for running the broker.
+        """Set up broker systemd service file.
 
         Args:
             user: The user to run the service as.
@@ -177,6 +210,10 @@ class GitUbuntuBroker(GitUbuntu):
         Returns:
             True if setup succeeded, False otherwise.
         """
+        # Stop the service before editing if it is running.
+        if self._started and not self.stop():
+            return False
+
         filename = "git-ubuntu-importer-service-broker.service"
         exec_start = f"/snap/bin/git-ubuntu importer-service-broker tcp://*:{broker_port}"
 
@@ -192,11 +229,16 @@ class GitUbuntuBroker(GitUbuntu):
             wanted_by="multi-user.target",
         )
 
-        if create_systemd_service_file(filename, service_string):
-            self._service_file = filename
-            return True
+        if not create_systemd_service_file(filename, service_string):
+            return False
 
-        return False
+        # Check if service already existed and daemon-reload if so.
+        if self._service_file != "" and not daemon_reload():
+            return False
+
+        self._service_file = filename
+
+        return True
 
 
 class GitUbuntuPoller(GitUbuntu):
@@ -226,6 +268,10 @@ class GitUbuntuPoller(GitUbuntu):
         Returns:
             True if setup succeeded, False otherwise.
         """
+        # Stop the service before editing if it is running.
+        if self._started and not self.stop():
+            return False
+
         filename = "git-ubuntu-importer-service-poller.service"
         exec_start = f"/snap/bin/git-ubuntu importer-service-poller --denylist {denylist}"
 
@@ -248,11 +294,16 @@ class GitUbuntuPoller(GitUbuntu):
             wanted_by="multi-user.target",
         )
 
-        if create_systemd_service_file(filename, service_string):
-            self._service_file = filename
-            return True
+        if not create_systemd_service_file(filename, service_string):
+            return False
 
-        return False
+        # Check if service already existed and daemon-reload if so.
+        if self._service_file != "" and not daemon_reload():
+            return False
+
+        self._service_file = filename
+
+        return True
 
 
 class GitUbuntuWorker(GitUbuntu):
@@ -282,6 +333,10 @@ class GitUbuntuWorker(GitUbuntu):
         Returns:
             True if setup succeeded, False otherwise.
         """
+        # Stop the service before editing if it is running.
+        if self._started and not self.stop():
+            return False
+
         filename = f"git-ubuntu-importer-service-worker{worker_name}.service"
         exec_start = (
             f"/snap/bin/git-ubuntu importer-service-worker %i tcp://{broker_ip}:{broker_port}"
@@ -303,8 +358,13 @@ class GitUbuntuWorker(GitUbuntu):
             wanted_by="multi-user.target",
         )
 
-        if create_systemd_service_file(filename, service_string):
-            self._service_file = filename
-            return True
+        if not create_systemd_service_file(filename, service_string):
+            return False
 
-        return False
+        # Check if service already existed and daemon-reload if so.
+        if self._service_file != "" and not daemon_reload():
+            return False
+
+        self._service_file = filename
+
+        return True
