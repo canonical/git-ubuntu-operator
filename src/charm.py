@@ -43,12 +43,34 @@ class GitUbuntuCharm(ops.CharmBase):
         self._git_ubuntu_importer_node = None
 
     @property
+    def _controller_ip(self) -> str:
+        return str(self.config.get("controller_ip"))
+
+    @property
+    def _controller_port(self) -> int:
+        port = self.config.get("controller_port")
+        if isinstance(port, int):
+            return port
+        return 0
+
+    @property
     def _git_ubuntu_snap_channel(self) -> str:
         return str(self.config.get("channel"))
 
     @property
+    def _data_directory(self) -> str:
+        return str(self.config.get("data_directory"))
+
+    @property
     def _lp_username(self) -> str:
         return str(self.config.get("lpuser"))
+
+    @property
+    def _node_id(self) -> int:
+        id = self.config.get("node_id")
+        if isinstance(id, int):
+            return id
+        return 0
 
     @property
     def _is_primary(self) -> bool:
@@ -57,19 +79,19 @@ class GitUbuntuCharm(ops.CharmBase):
         return False
 
     @property
+    def _source_directory(self) -> str:
+        return str(self.config.get("source_directory"))
+
+    @property
+    def _system_username(self) -> str:
+        return str(self.config.get("system_user"))
+
+    @property
     def _num_workers(self) -> int:
         num_workers = self.config.get("workers")
         if isinstance(num_workers, int):
             return num_workers
         return 0
-
-    @property
-    def _data_directory(self) -> str:
-        return str(self.config.get("data_directory"))
-
-    @property
-    def _source_directory(self) -> str:
-        return str(self.config.get("source_directory"))
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
