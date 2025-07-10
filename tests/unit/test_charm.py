@@ -7,20 +7,20 @@
 
 from unittest.mock import call, patch
 
-import pytest
 from charms.operator_libs_linux.v0.apt import PackageError
 from ops.testing import ActiveStatus, BlockedStatus, Context, State
+from pytest import fixture
 
 from charm import GitUbuntuCharm
 
 
-@pytest.fixture
+@fixture
 def ctx():
     """Create a standard context for the charm."""
     return Context(GitUbuntuCharm)
 
 
-@pytest.fixture
+@fixture
 def base_state(ctx):
     """Create a base state for the charm."""
     return State(leader=True)
