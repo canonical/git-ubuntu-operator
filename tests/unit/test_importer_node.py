@@ -11,13 +11,13 @@ from unittest.mock import patch
 from pytest import fixture
 
 from git_ubuntu import GitUbuntuBroker, GitUbuntuPoller
-from importer_node import ImporterNode
+from importer_node import ImporterNode, PrimaryImporterNode
 
 
 @fixture
 def default_node():
     """Create a node with default settings."""
-    return ImporterNode(True, 2, "/var/local/git-ubuntu", "/home/ubuntu")
+    return PrimaryImporterNode(2, "/var/local/git-ubuntu", "/home/ubuntu")
 
 
 def test_init_creates_correct_instances(default_node):
@@ -26,12 +26,12 @@ def test_init_creates_correct_instances(default_node):
     assert isinstance(default_node._poller, GitUbuntuPoller)
     assert len(default_node._workers) == 2
 
-    secondary_triple_node = ImporterNode(False, 3, "/var/local/git-ubuntu", "/home/ubuntu")
+    secondary_triple_node = ImporterNode(3)
     assert len(secondary_triple_node._workers) == 3
 
 
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -52,8 +52,8 @@ def test_data_directory_update_same_success(
 
 @patch("importer_node.GitUbuntuBroker.setup")
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -92,8 +92,8 @@ def test_data_directory_update_exists_success(
 
 @patch("importer_node.GitUbuntuBroker.setup")
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -130,8 +130,8 @@ def test_data_directory_update_folder_exists_success(
     mock_broker_setup.assert_called_once()
 
 
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -153,8 +153,8 @@ def test_data_directory_update_mkdir_file_fail(
     mock_destroy.assert_not_called()
 
 
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -175,8 +175,8 @@ def test_data_directory_update_permission_fail(
     mock_destroy.assert_not_called()
 
 
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -197,8 +197,8 @@ def test_data_directory_update_os_fail(
     mock_destroy.assert_not_called()
 
 
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -221,8 +221,8 @@ def test_data_directory_stop_fail(
 
 @patch("importer_node.GitUbuntuBroker.setup")
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -257,8 +257,8 @@ def test_data_directory_destroy_fail(
 
 @patch("importer_node.GitUbuntuBroker.setup")
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -295,8 +295,8 @@ def test_data_directory_poller_fail(
 
 @patch("importer_node.GitUbuntuBroker.setup")
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -332,8 +332,8 @@ def test_data_directory_broker_fail(
 
 
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -361,9 +361,9 @@ def test_source_directory_update_same_success(
 
 
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -399,9 +399,9 @@ def test_source_directory_update_source_exists_success(
 
 
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -439,9 +439,9 @@ def test_source_directory_update_directory_exists_success(
 
 
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -474,9 +474,9 @@ def test_source_directory_update_file_exists_fail(
 
 
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -508,9 +508,9 @@ def test_source_directory_update_permission_fail(
 
 
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -542,9 +542,9 @@ def test_source_directory_update_os_fail(
 
 
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -576,9 +576,9 @@ def test_source_directory_update_stop_fail(
 
 
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")
@@ -614,9 +614,9 @@ def test_source_directory_update_rmtree_fail(
 
 
 @patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.ImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.ImporterNode.destroy")
-@patch("importer_node.ImporterNode.stop")
+@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
+@patch("importer_node.PrimaryImporterNode.destroy")
+@patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
 @patch("importer_node.Path.exists")
 @patch("importer_node.Path.is_dir")

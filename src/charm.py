@@ -18,7 +18,7 @@ import ops
 
 import launchpad as lp
 import package_configuration as pkgs
-from importer_node import ImporterNode
+from importer_node import ImporterNode, PrimaryImporterNode
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -150,9 +150,12 @@ class GitUbuntuCharm(ops.CharmBase):
             return
 
         # Initialize git-ubuntu instance manager
-        self._git_ubuntu_importer_node = ImporterNode(
-            self._is_primary, self._num_workers, self._data_directory, self._source_directory
-        )
+        if self._is_primary:
+            self._git_ubuntu_importer_node = PrimaryImporterNode(
+                self._num_workers, self._data_directory, self._source_directory
+            )
+        else:
+            self._git_ubuntu_importer_node = ImporterNode(self._num_workers)
 
         self.unit.status = ops.ActiveStatus("Ready")
 

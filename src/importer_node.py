@@ -15,32 +15,86 @@ logger = logging.getLogger(__name__)
 
 
 class ImporterNode:
-    """Manager of git-ubuntu importer components on this system."""
+    """Manager of git-ubuntu workers on this system."""
 
-    def __init__(
-        self, primary: bool, num_workers: int, data_directory: str, source_directory: str
-    ):
+    def __init__(self, num_workers: int):
         """Initialize git-ubuntu instance and local file variables.
 
         Args:
-            primary: True if this is the primary node, create broker and poller instances.
+            num_workers: The number of worker instances to set up.
+        """
+        self._workers = [GitUbuntuWorker() for _ in range(num_workers)]
+
+    def install(self) -> bool:
+        """Run git-ubuntu instance install and setup for workers.
+
+        Returns:
+            True if installation succeeded, False otherwise.
+        """
+        for worker in self._workers:
+            if not worker.setup():
+                return False
+
+        return True
+
+    def start(self) -> bool:
+        """Start all git-ubuntu processes.
+
+        Returns:
+            True if all started successfully, False otherwise.
+        """
+        for worker in self._workers:
+            if not worker.start():
+                return False
+
+        return True
+
+    def stop(self) -> bool:
+        """Stop all git-ubuntu processes.
+
+        Returns:
+            True on stop success for all processes, False otherwise.
+        """
+        for worker in self._workers:
+            if not worker.stop():
+                return False
+
+        return True
+
+    def destroy(self) -> bool:
+        """Destroy services for all git-ubuntu processes.
+
+        Returns:
+            True on destroy success for all processes, False otherwise.
+        """
+        for worker in self._workers:
+            if not worker.destroy():
+                return False
+
+        return True
+
+
+class PrimaryImporterNode(ImporterNode):
+    """Manager of git-ubuntu importer components on the primary node's system."""
+
+    def __init__(self, num_workers: int, data_directory: str, source_directory: str):
+        """Initialize git-ubuntu instance and local file variables.
+
+        Args:
             num_workers: The number of worker instances to set up.
             data_directory: The database and state info directory location.
             source_directory: The directory to keep the git-ubuntu source in.
         """
-        self._primary = primary
-
-        if self._primary:
-            self._broker = GitUbuntuBroker()
-            self._poller = GitUbuntuPoller()
-
-        self._workers = [GitUbuntuWorker() for _ in range(num_workers)]
+        self._broker = GitUbuntuBroker()
+        self._poller = GitUbuntuPoller()
 
         self._data_dir = data_directory
         self._source_dir = source_directory
 
         self._git_ubuntu_source_url = "https://git.launchpad.net/git-ubuntu"
         self._git_ubuntu_source_subdir = "live-allowlist-denylist-source"
+
+        super().__init__(num_workers)
 
     def _clone_git_ubuntu_source(self, directory: Path) -> bool:
         """Clone the git-ubuntu git repo to a given directory.
@@ -67,20 +121,17 @@ class ImporterNode:
         return True
 
     def install(self) -> bool:
-        """Set up database and denylist if primary, and run git-ubuntu instance setup.
+        """Set up database and denylist, and run git-ubuntu instance setup.
 
         Returns:
             True if installation succeeded, False otherwise.
         """
-        if self._primary:
-            if not self._broker.setup():
-                return False
-            if not self._poller.setup():
-                return False
-
-        for worker in self._workers:
-            if not worker.setup():
-                return False
+        if not self._broker.setup():
+            return False
+        if not self._poller.setup():
+            return False
+        if not super().install():
+            return False
 
         return True
 
@@ -90,15 +141,12 @@ class ImporterNode:
         Returns:
             True if all started successfully, False otherwise.
         """
-        if self._primary:
-            if not self._broker.start():
-                return False
-            if not self._poller.start():
-                return False
-
-        for worker in self._workers:
-            if not worker.start():
-                return False
+        if not self._broker.start():
+            return False
+        if not self._poller.start():
+            return False
+        if not super().start():
+            return False
 
         return True
 
@@ -115,16 +163,12 @@ class ImporterNode:
         Returns:
             True on stop success for all relevant processes, False otherwise.
         """
-        if self._primary:
-            if stop_poller and not self._poller.stop():
-                return False
-            if stop_broker and not self._broker.stop():
-                return False
-
-        if stop_workers:
-            for worker in self._workers:
-                if not worker.stop():
-                    return False
+        if stop_poller and not self._poller.stop():
+            return False
+        if stop_broker and not self._broker.stop():
+            return False
+        if stop_workers and not super().stop():
+            return False
 
         return True
 
@@ -144,16 +188,12 @@ class ImporterNode:
         Returns:
             True on destroy success for all relevant processes, False otherwise.
         """
-        if self._primary:
-            if destroy_poller and not self._poller.destroy():
-                return False
-            if destroy_broker and not self._broker.destroy():
-                return False
-
-        if destroy_workers:
-            for worker in self._workers:
-                if not worker.destroy():
-                    return False
+        if destroy_poller and not self._poller.destroy():
+            return False
+        if destroy_broker and not self._broker.destroy():
+            return False
+        if destroy_workers and not super().destroy():
+            return False
 
         return True
 
@@ -169,7 +209,7 @@ class ImporterNode:
             True if data directory migration succeeded, False otherwise.
         """
         # Ignore request if secondary node or data directory name has not changed.
-        if not self._primary or data_directory == self._data_dir:
+        if data_directory == self._data_dir:
             return True
 
         new_dir = Path(data_directory)
@@ -240,7 +280,7 @@ class ImporterNode:
             True if new source directory setup succeeded, False otherwise.
         """
         # Ignore request if secondary node or source directory name has not changed.
-        if not self._primary or source_directory == self._source_dir:
+        if source_directory == self._source_dir:
             return True
 
         new_dir = Path(source_directory)
