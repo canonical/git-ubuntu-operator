@@ -67,9 +67,9 @@ class GitUbuntuCharm(ops.CharmBase):
 
     @property
     def _node_id(self) -> int:
-        id = self.config.get("node_id")
+        node_id = self.config.get("node_id")
         if isinstance(id, int):
-            return id
+            return node_id
         return 0
 
     @property
