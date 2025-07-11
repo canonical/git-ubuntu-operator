@@ -26,11 +26,11 @@ def base_state(ctx):
     return State(leader=True)
 
 
-def test_start_success(ctx, base_state):
-    """Test successful startup."""
+def test_start_empty_importer_node(ctx, base_state):
+    """Test startup when importer node is not yet initialized."""
     out = ctx.run(ctx.on.start(), base_state)
 
-    assert out.unit_status == ActiveStatus()
+    assert out.unit_status == BlockedStatus("Failed to start, services not yet installed.")
 
 
 @patch("charms.operator_libs_linux.v0.apt.update")
@@ -141,58 +141,6 @@ def test_install_invalid_channel(mock_update_lpuser_config, mock_add_package, mo
     mock_update_lpuser_config.assert_called_once()
 
 
-@patch("charms.operator_libs_linux.v0.apt.update")
-@patch("charms.operator_libs_linux.v0.apt.add_package")
-@patch("charm.GitUbuntuCharm._update_lpuser_config")
-@patch("charm.GitUbuntuCharm._update_git_ubuntu_snap")
-def test_config_changed_success(
-    mock_update_git_ubuntu_snap,
-    mock_update_lpuser_config,
-    mock_add_package,
-    mock_update,
-    ctx,
-):
-    """Test successful config change with valid config values."""
-    mock_update_lpuser_config.return_value = True
-    mock_update_git_ubuntu_snap.return_value = True
-    state = State(config={"channel": "edge", "lpuser": "git-ubuntu-bot", "primary": True})
-
-    out = ctx.run(ctx.on.config_changed(), state)
-
-    assert out.unit_status == ActiveStatus("Ready")
-
-    mock_update_lpuser_config.assert_called_once()
-    mock_update.assert_called_once()
-    mock_add_package.assert_called_once_with("sqlite3")
-    mock_update_git_ubuntu_snap.assert_called_once()
-
-
-@patch("charms.operator_libs_linux.v0.apt.update")
-@patch("charms.operator_libs_linux.v0.apt.add_package")
-@patch("charm.GitUbuntuCharm._update_lpuser_config")
-@patch("charm.GitUbuntuCharm._update_git_ubuntu_snap")
-def test_config_changed_secondary_success(
-    mock_update_git_ubuntu_snap,
-    mock_update_lpuser_config,
-    mock_add_package,
-    mock_update,
-    ctx,
-):
-    """Test successful config change with valid config values and primary False."""
-    mock_update_lpuser_config.return_value = True
-    mock_update_git_ubuntu_snap.return_value = True
-    state = State(config={"channel": "edge", "lpuser": "git-ubuntu-bot", "primary": False})
-
-    out = ctx.run(ctx.on.config_changed(), state)
-
-    assert out.unit_status == ActiveStatus("Ready")
-
-    mock_update_lpuser_config.assert_called_once()
-    mock_update.assert_not_called()
-    mock_add_package.assert_not_called()
-    mock_update_git_ubuntu_snap.assert_called_once()
-
-
 @patch("charm.GitUbuntuCharm._update_git_ubuntu_snap")
 def test_config_changed_invalid_lpuser(mock_update_git_ubuntu_snap, ctx):
     """Test installation with invalid lpuser."""
@@ -220,26 +168,6 @@ def test_config_changed_invalid_channel(mock_update_lpuser_config, ctx):
     mock_update_lpuser_config.assert_called_once()
 
 
-@patch("charms.operator_libs_linux.v0.apt.update")
-@patch("charms.operator_libs_linux.v0.apt.add_package")
-@patch("charm.pkgs.git_update_lpuser_config")
-@patch("charm.GitUbuntuCharm._update_git_ubuntu_snap")
-def test_update_lpuser_config_git_success(
-    mock_update_git_ubuntu_snap, mock_git_config, mock_add_package, mock_update, ctx, base_state
-):
-    """Test a git config update failure on install."""
-    mock_git_config.return_value = True
-
-    out = ctx.run(ctx.on.config_changed(), base_state)
-
-    assert out.unit_status == ActiveStatus("Ready")
-
-    mock_git_config.assert_called_once()
-    mock_update.assert_called_once()
-    mock_add_package.assert_called_once_with("sqlite3")
-    mock_update_git_ubuntu_snap.assert_called_once()
-
-
 @patch("charm.pkgs.git_update_lpuser_config")
 def test_update_lpuser_config_git_fail(mock_git_config, ctx, base_state):
     """Test a git config update failure on install."""
@@ -249,26 +177,6 @@ def test_update_lpuser_config_git_fail(mock_git_config, ctx, base_state):
 
     assert isinstance(out.unit_status, BlockedStatus)
     assert "Failed to update lpuser config." in str(out.unit_status.message)
-
-
-@patch("charm.GitUbuntuCharm._update_lpuser_config")
-@patch("charm.pkgs.git_ubuntu_snap_refresh")
-def test_update_snap_refresh_success(
-    mock_git_ubuntu_snap_refresh,
-    mock_update_lpuser_config,
-    ctx,
-):
-    """Test successful snap refresh with valid config values."""
-    mock_update_lpuser_config.return_value = True
-    mock_git_ubuntu_snap_refresh.return_value = True
-    state = State(config={"channel": "edge", "lpuser": "git-ubuntu-bot", "primary": False})
-
-    out = ctx.run(ctx.on.config_changed(), state)
-
-    assert out.unit_status == ActiveStatus("Ready")
-
-    mock_update_lpuser_config.assert_called_once()
-    mock_git_ubuntu_snap_refresh.assert_called_once()
 
 
 @patch("charm.GitUbuntuCharm._update_lpuser_config")

@@ -18,7 +18,7 @@ import ops
 
 import launchpad as lp
 import package_configuration as pkgs
-from importer_node import ImporterNode, PrimaryImporterNode
+from importer_node import EmptyImporterNode, ImporterNode, PrimaryImporterNode
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class GitUbuntuCharm(ops.CharmBase):
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
-        self._git_ubuntu_importer_node = None
+        self._git_ubuntu_importer_node: ImporterNode = EmptyImporterNode()
 
     @property
     def _controller_ip(self) -> str:
@@ -93,9 +93,34 @@ class GitUbuntuCharm(ops.CharmBase):
             return num_workers
         return 0
 
+    def _init_importer_node(self) -> None:
+        """Initialize the git-ubuntu instance manager with current settings."""
+        if self._is_primary:
+            self._git_ubuntu_importer_node = PrimaryImporterNode(
+                self._node_id,
+                self._num_workers,
+                self._system_username,
+                self._controller_port,
+                self._data_directory,
+                self._source_directory,
+            )
+        else:
+            self._git_ubuntu_importer_node = ImporterNode(
+                self._node_id,
+                self._num_workers,
+                self._system_username,
+                self._controller_port,
+                self._controller_ip,
+            )
+
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
-        self.unit.status = ops.ActiveStatus()
+        if isinstance(self._git_ubuntu_importer_node, EmptyImporterNode):
+            self.unit.status = ops.BlockedStatus("Failed to start, services not yet installed.")
+        elif self._git_ubuntu_importer_node.start():
+            self.unit.status = ops.ActiveStatus()
+        else:
+            self.unit.status = ops.BlockedStatus("Failed to start services.")
 
     def _update_lpuser_config(self) -> bool:
         """Attempt to update git config with the new Launchpad User ID."""
@@ -150,30 +175,15 @@ class GitUbuntuCharm(ops.CharmBase):
             return
 
         # Initialize git-ubuntu instance manager
-        if self._is_primary:
-            self._git_ubuntu_importer_node = PrimaryImporterNode(
-                self._node_id,
-                self._num_workers,
-                self._system_username,
-                self._controller_port,
-                self._data_directory,
-                self._source_directory,
-            )
-        else:
-            self._git_ubuntu_importer_node = ImporterNode(
-                self._node_id,
-                self._num_workers,
-                self._system_username,
-                self._controller_port,
-                self._controller_ip,
-            )
+        self._init_importer_node()
+        self._git_ubuntu_importer_node.install()
 
         self.unit.status = ops.ActiveStatus("Ready")
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle updates to config items."""
-        # Update lpuser config
-        if not self._update_lpuser_config():
+        # Update lpuser config and git-ubuntu snap
+        if not self._update_lpuser_config() or not self._update_git_ubuntu_snap():
             return
 
         # Install sqlite3 if this is now the primary node
@@ -181,11 +191,61 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
             return
 
-        # Update git-ubuntu snap
-        if not self._update_git_ubuntu_snap():
-            return
+        run_install = False
+        update_fail = False
 
-        self.unit.status = ops.ActiveStatus("Ready")
+        # Initialize the instance manager if it has yet to be.
+        if isinstance(self._git_ubuntu_importer_node, EmptyImporterNode):
+            run_install = True
+
+        # Update git-ubuntu instances.
+        elif self._is_primary:
+            # This node is becoming the primary node but is secondary.
+            if not isinstance(self._git_ubuntu_importer_node, PrimaryImporterNode):
+                self._git_ubuntu_importer_node.destroy()
+                run_install = True
+
+            # Update primary node with new values.
+            elif isinstance(
+                self._git_ubuntu_importer_node, PrimaryImporterNode
+            ) and not self._git_ubuntu_importer_node.update(  # pylint: disable=unexpected-keyword-arg
+                False,
+                self._node_id,
+                self._num_workers,
+                self._system_username,
+                self._controller_port,
+                "127.0.0.1",
+                data_directory=self._data_directory,
+                source_directory=self._source_directory,
+            ):
+                update_fail = True
+        else:
+            # This node is becoming secondary but is the primary.
+            if isinstance(self._git_ubuntu_importer_node, PrimaryImporterNode):
+                self._git_ubuntu_importer_node.destroy()
+                run_install = True
+
+            # Update primary node with new values.
+            elif not self._git_ubuntu_importer_node.update(
+                False,
+                self._node_id,
+                self._num_workers,
+                self._system_username,
+                self._controller_port,
+                self._controller_ip,
+            ):
+                update_fail = True
+
+        if run_install:
+            # Initialize and install a new node.
+            self._init_importer_node()
+            if not self._git_ubuntu_importer_node.install():
+                self.unit.status = ops.BlockedStatus("Failed to install new services.")
+        elif update_fail:
+            # Show that service updates failed.
+            self.unit.status = ops.BlockedStatus("Failed to update services.")
+        else:
+            self.unit.status = ops.ActiveStatus("Ready")
 
 
 if __name__ == "__main__":  # pragma: nocover

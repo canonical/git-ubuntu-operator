@@ -19,7 +19,7 @@ class ImporterNode:
 
     def __init__(
         self, node_id: int, num_workers: int, system_user: str, primary_port: int, primary_ip: str
-    ):
+    ) -> None:
         """Initialize git-ubuntu instance and local file variables.
 
         Args:
@@ -168,7 +168,7 @@ class PrimaryImporterNode(ImporterNode):
         primary_port: int,
         data_directory: str,
         source_directory: str,
-    ):
+    ) -> None:
         """Initialize git-ubuntu instance and local file variables.
 
         Args:
@@ -513,3 +513,47 @@ class PrimaryImporterNode(ImporterNode):
 
         self._source_dir = source_directory
         return True
+
+
+class EmptyImporterNode(ImporterNode):
+    """A dummy importer node that does nothing."""
+
+    def __init__(self) -> None:
+        """Initialize an empty representation of the node."""
+        super().__init__(0, 0, "", 0, "")
+
+    def install(self) -> bool:
+        """Override install for empty node.
+
+        Returns:
+            False
+        """
+        logger.error("Failed to install, not initialized.")
+        return False
+
+    def start(self) -> bool:
+        """Override start for empty node.
+
+        Returns:
+            False
+        """
+        logger.error("Failed to start services, not initialized.")
+        return False
+
+    def stop(self) -> bool:
+        """Override stop for empty node.
+
+        Returns:
+            False
+        """
+        logger.error("Failed to stop services, not initialized.")
+        return False
+
+    def destroy(self) -> bool:
+        """Override destroy for empty node.
+
+        Returns:
+            False
+        """
+        logger.error("Failed to destroy services, not initialized.")
+        return False
