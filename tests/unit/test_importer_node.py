@@ -40,7 +40,7 @@ def test_data_directory_update_same_success(
     mock_mkdir, mock_isdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
 ):
     """Test data_directory update attempt with same name."""
-    assert default_node.update_data_directory("/var/local/git-ubuntu")
+    assert default_node._update_data_directory("/var/local/git-ubuntu")
 
     mock_mkdir.assert_not_called()
     mock_isdir.assert_not_called()
@@ -78,7 +78,7 @@ def test_data_directory_update_exists_success(
     mock_poller_setup.return_value = True
     mock_broker_setup.return_value = True
 
-    assert default_node.update_data_directory("/var/new/git-ubuntu")
+    assert default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_called_once()
@@ -118,7 +118,7 @@ def test_data_directory_update_folder_exists_success(
     mock_poller_setup.return_value = True
     mock_broker_setup.return_value = True
 
-    assert default_node.update_data_directory("/var/new/git-ubuntu")
+    assert default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_called_once()
@@ -143,7 +143,7 @@ def test_data_directory_update_mkdir_file_fail(
     mock_mkdir.side_effect = FileExistsError()
     mock_isdir.return_value = False
 
-    assert not default_node.update_data_directory("/var/new/git-ubuntu")
+    assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_called_once()
@@ -165,7 +165,7 @@ def test_data_directory_update_permission_fail(
     """Test data_directory update attempt with a permission error on mkdir."""
     mock_mkdir.side_effect = PermissionError()
 
-    assert not default_node.update_data_directory("/var/new/git-ubuntu")
+    assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_not_called()
@@ -187,7 +187,7 @@ def test_data_directory_update_os_fail(
     """Test data_directory update attempt with an OS error on mkdir."""
     mock_mkdir.side_effect = OSError()
 
-    assert not default_node.update_data_directory("/var/new/git-ubuntu")
+    assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_not_called()
@@ -209,7 +209,7 @@ def test_data_directory_stop_fail(
     """Test data_directory update attempt when git-ubuntu fails to stop."""
     mock_stop.return_value = False
 
-    assert not default_node.update_data_directory("/var/new/git-ubuntu")
+    assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_not_called()
@@ -243,7 +243,7 @@ def test_data_directory_destroy_fail(
     mock_exists.return_value = True
     mock_destroy.return_value = False
 
-    assert not default_node.update_data_directory("/var/new/git-ubuntu")
+    assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_not_called()
@@ -281,7 +281,7 @@ def test_data_directory_poller_fail(
     mock_poller_setup.return_value = False
     mock_broker_setup.return_value = True
 
-    assert not default_node.update_data_directory("/var/new/git-ubuntu")
+    assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_not_called()
@@ -319,7 +319,7 @@ def test_data_directory_broker_fail(
     mock_poller_setup.return_value = True
     mock_broker_setup.return_value = False
 
-    assert not default_node.update_data_directory("/var/new/git-ubuntu")
+    assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_not_called()
@@ -349,7 +349,7 @@ def test_source_directory_update_same_success(
     default_node,
 ):
     """Test source_directory update attempt with same name."""
-    assert default_node.update_source_directory("/home/ubuntu")
+    assert default_node._update_source_directory("/home/ubuntu")
 
     mock_mkdir.assert_not_called()
     mock_isdir.assert_not_called()
@@ -387,7 +387,7 @@ def test_source_directory_update_source_exists_success(
     mock_destroy.return_value = True
     mock_poller_setup.return_value = True
 
-    assert default_node.update_source_directory("/home/user2")
+    assert default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_called_once()
@@ -426,7 +426,7 @@ def test_source_directory_update_directory_exists_success(
     mock_destroy.return_value = True
     mock_poller_setup.return_value = True
 
-    assert default_node.update_source_directory("/home/user2")
+    assert default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_called_once()
@@ -461,7 +461,7 @@ def test_source_directory_update_file_exists_fail(
     mock_mkdir.side_effect = FileExistsError()
     mock_isdir.return_value = False
 
-    assert not default_node.update_source_directory("/home/user2")
+    assert not default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_called_once()
@@ -495,7 +495,7 @@ def test_source_directory_update_permission_fail(
     """Test source_directory update attempt with permission error."""
     mock_mkdir.side_effect = PermissionError()
 
-    assert not default_node.update_source_directory("/home/user2")
+    assert not default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_not_called()
@@ -529,7 +529,7 @@ def test_source_directory_update_os_fail(
     """Test source_directory update attempt with OS error."""
     mock_mkdir.side_effect = OSError()
 
-    assert not default_node.update_source_directory("/home/user2")
+    assert not default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_not_called()
@@ -563,7 +563,7 @@ def test_source_directory_update_stop_fail(
     """Test source_directory update attempt when git-ubuntu stop fails."""
     mock_stop.return_value = False
 
-    assert not default_node.update_source_directory("/home/user2")
+    assert not default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_not_called()
@@ -601,7 +601,7 @@ def test_source_directory_update_rmtree_fail(
     mock_exists.return_value = True
     mock_rmtree.side_effect = OSError()
 
-    assert not default_node.update_source_directory("/home/user2")
+    assert not default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_called_once()
@@ -637,7 +637,7 @@ def test_source_directory_update_clone_fail(
     mock_exists.return_value = False
     mock_clone.return_value = False
 
-    assert not default_node.update_source_directory("/home/user2")
+    assert not default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
     mock_isdir.assert_not_called()

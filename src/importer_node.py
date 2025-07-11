@@ -35,6 +35,23 @@ class ImporterNode:
         self._primary_ip = primary_ip
         self._workers = [GitUbuntuWorker() for _ in range(num_workers)]
 
+    def _setup_worker(self, worker: GitUbuntuWorker, worker_number: int) -> bool:
+        """Set up a worker with the current node settings.
+
+        Args:
+            worker: The allocated git-ubuntu worker to set up.
+            worker_number: The worker's numeric id.
+
+        Returns: True if the worker was set up, False otherwise.
+        """
+        return worker.setup(
+            self._user,
+            self._user,
+            f"{self._node_id}_{worker_number}",
+            self._primary_ip,
+            self._port,
+        )
+
     def install(self) -> bool:
         """Run git-ubuntu instance install and setup for workers.
 
@@ -42,10 +59,64 @@ class ImporterNode:
             True if installation succeeded, False otherwise.
         """
         for i, worker in enumerate(self._workers):
-            if not worker.setup(
-                self._user, self._user, f"{self._node_id}_{i}", self._primary_ip, self._port
-            ):
+            if not self._setup_worker(worker, i):
                 return False
+
+        return True
+
+    def update(
+        self,
+        force_refresh: bool,
+        node_id: int,
+        num_workers: int,
+        system_user: str,
+        primary_port: int,
+        primary_ip: str,
+    ) -> bool:
+        """Update the importer node's configuration.
+
+        Args:
+            force_refresh: Enforce removal and recreation of systemd services.
+            node_id: The unique ID of this node.
+            num_workers: The number of worker instances to set up.
+            system_user: The user + group to run the services as.
+            primary_port: The network port used for worker assignments.
+            primary_ip: The IP or network location of the primary node.
+
+        Returns:
+            True if the update succeeded, False otherwise.
+        """
+        needs_refresh = (
+            force_refresh
+            or node_id != self._node_id
+            or system_user != self._user
+            or primary_port != self._port
+            or primary_ip != self._primary_ip
+        )
+        original_num_workers = len(self._workers)
+
+        self._node_id = node_id
+        self._user = system_user
+        self._port = primary_port
+        self._primary_ip = primary_ip
+
+        # Remove unneeded workers.
+        for _ in range(original_num_workers - num_workers):
+            worker = self._workers.pop()
+            if not worker.destroy():
+                return False
+
+        # Add as many new workers as needed.
+        for i in range(original_num_workers, num_workers):
+            new_worker = GitUbuntuWorker()
+            if not self._setup_worker(new_worker, i):
+                return False
+
+        # Refresh all old workers if requested.
+        if needs_refresh:
+            for i in range(original_num_workers):
+                if not self._workers[i].destroy() or not self._setup_worker(self._workers[i], i):
+                    return False
 
         return True
 
@@ -226,7 +297,71 @@ class PrimaryImporterNode(ImporterNode):
 
         return True
 
-    def update_data_directory(self, data_directory: str) -> bool:
+    def update(
+        self,
+        force_refresh: bool,
+        node_id: int,
+        num_workers: int,
+        system_user: str,
+        primary_port: int,
+        primary_ip: str = "127.0.0.1",
+        data_directory: str = "",
+        source_directory: str = "",
+    ) -> bool:
+        """Update the importer node's configuration.
+
+        Args:
+            force_refresh: Enforce removal and recreation of systemd services.
+            node_id: The unique ID of this node.
+            num_workers: The number of worker instances to set up.
+            system_user: The user + group to run the services as.
+            primary_port: The network port used for worker assignments.
+            primary_ip: The IP or network location of the primary node.
+            data_directory: The database and state info directory location.
+            source_directory: The directory to keep the git-ubuntu source in.
+
+        Returns:
+            True if the update succeeded, False otherwise.
+        """
+        full_refresh_needed = (
+            force_refresh or system_user != self._user or data_directory != self._data_dir
+        )
+        broker_refresh_needed = full_refresh_needed or primary_port != self._port
+        poller_refresh_needed = full_refresh_needed or source_directory != self._source_dir
+
+        # Update directories if needed.
+        if not self._update_data_directory(data_directory) or not self._update_source_directory(
+            source_directory
+        ):
+            return False
+
+        # Destroy broker and/or poller if needed, let super class handle workers.
+        if not self.destroy(broker_refresh_needed, poller_refresh_needed, False):
+            return False
+
+        # Handle variable and worker updates.
+        if not super().update(
+            force_refresh, node_id, num_workers, system_user, primary_port, primary_ip
+        ):
+            return False
+
+        # Refresh broker if needed.
+        if broker_refresh_needed and not self._broker.setup(self._user, self._user, self._port):
+            return False
+
+        # Refresh poller if needed.
+        if poller_refresh_needed and not self._poller.setup(
+            self._user,
+            self._user,
+            Path(self._source_dir)
+            / self._git_ubuntu_source_subdir
+            / "gitubuntu/source-package-denylist.txt",
+        ):
+            return False
+
+        return True
+
+    def _update_data_directory(self, data_directory: str) -> bool:
         """Update the data directory location, notify git-ubuntu, and move existing data.
 
         If data already exists in new directory, it will not be overridden.
@@ -305,7 +440,7 @@ class PrimaryImporterNode(ImporterNode):
 
         return True
 
-    def update_source_directory(self, source_directory: str) -> bool:
+    def _update_source_directory(self, source_directory: str) -> bool:
         """Update the source directory location, notify git-ubuntu, and re-clone source.
 
         Args:
