@@ -140,27 +140,25 @@ class GitUbuntu:
         """Start the git-ubuntu instance with systemd.
 
         Returns:
-            True if systemd start was successful, False otherwise.
+            True if the service has started, False otherwise.
         """
         if start_service(self._service_file):
             self._started = True
-            return True
-
-        logger.error("Failed to start %s", self._service_file)
-        return False
+        else:
+            logger.error("Failed to start %s", self._service_file)
+        return self._started
 
     def stop(self) -> bool:
         """Stop the git-ubuntu instance.
 
         Returns:
-            True if systemd stop was successful, False otherwise.
+            True if the service has stopped, False otherwise.
         """
         if stop_service(self._service_file):
             self._started = False
-            return True
-
-        logger.error("Failed to stop %s", self._service_file)
-        return False
+        else:
+            logger.error("Failed to stop %s", self._service_file)
+        return not self._started
 
     def destroy(self) -> bool:
         """Destroy the instance and its service file.
