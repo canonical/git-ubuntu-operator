@@ -71,6 +71,12 @@ config:
         instances.
       default: True
       type: boolean
+    publish:
+      description: |
+        If updates should be pushed to Launchpad. Set to False for local
+        testing.
+      default: True
+      type: boolean
     source_directory:
       description: |
         The directory to download the git-ubuntu source in. The included source

@@ -18,7 +18,13 @@ class ImporterNode:
     """Manager of git-ubuntu workers on this system."""
 
     def __init__(
-        self, node_id: int, num_workers: int, system_user: str, primary_port: int, primary_ip: str
+        self,
+        node_id: int,
+        num_workers: int,
+        system_user: str,
+        push_to_lp: bool,
+        primary_port: int,
+        primary_ip: str,
     ) -> None:
         """Initialize git-ubuntu instance and local file variables.
 
@@ -26,11 +32,13 @@ class ImporterNode:
             node_id: The unique ID of this node.
             num_workers: The number of worker instances to set up.
             system_user: The user + group to run the services as.
+            push_to_lp: True if publishing repositories to Launchpad.
             primary_port: The network port used for worker assignments.
             primary_ip: The IP or network location of the primary node.
         """
         self._node_id = node_id
         self._user = system_user
+        self._push_to_lp = push_to_lp
         self._port = primary_port
         self._primary_ip = primary_ip
         self._workers = [GitUbuntuWorker() for _ in range(num_workers)]
@@ -48,6 +56,7 @@ class ImporterNode:
             self._user,
             self._user,
             f"{self._node_id}_{worker_number}",
+            self._push_to_lp,
             self._primary_ip,
             self._port,
         )
@@ -70,6 +79,7 @@ class ImporterNode:
         node_id: int,
         num_workers: int,
         system_user: str,
+        push_to_lp: bool,
         primary_port: int,
         primary_ip: str,
     ) -> bool:
@@ -80,6 +90,7 @@ class ImporterNode:
             node_id: The unique ID of this node.
             num_workers: The number of worker instances to set up.
             system_user: The user + group to run the services as.
+            push_to_lp: True if publishing repositories to Launchpad.
             primary_port: The network port used for worker assignments.
             primary_ip: The IP or network location of the primary node.
 
@@ -90,6 +101,7 @@ class ImporterNode:
             force_refresh
             or node_id != self._node_id
             or system_user != self._user
+            or push_to_lp != self._push_to_lp
             or primary_port != self._port
             or primary_ip != self._primary_ip
         )
@@ -165,6 +177,7 @@ class PrimaryImporterNode(ImporterNode):
         node_id: int,
         num_workers: int,
         system_user: str,
+        push_to_lp: bool,
         primary_port: int,
         data_directory: str,
         source_directory: str,
@@ -175,6 +188,7 @@ class PrimaryImporterNode(ImporterNode):
             node_id: The unique ID of this node.
             num_workers: The number of worker instances to set up.
             system_user: The user + group to run the services as.
+            push_to_lp: True if publishing repositories to Launchpad.
             primary_port: The network port used for worker assignments.
             data_directory: The database and state info directory location.
             source_directory: The directory to keep the git-ubuntu source in.
@@ -188,7 +202,7 @@ class PrimaryImporterNode(ImporterNode):
         self._git_ubuntu_source_url = "https://git.launchpad.net/git-ubuntu"
         self._git_ubuntu_source_subdir = "live-allowlist-denylist-source"
 
-        super().__init__(node_id, num_workers, system_user, primary_port, "127.0.0.1")
+        super().__init__(node_id, num_workers, system_user, push_to_lp, primary_port, "127.0.0.1")
 
     def _clone_git_ubuntu_source(self, directory: Path) -> bool:
         """Clone the git-ubuntu git repo to a given directory.
@@ -303,6 +317,7 @@ class PrimaryImporterNode(ImporterNode):
         node_id: int,
         num_workers: int,
         system_user: str,
+        push_to_lp: bool,
         primary_port: int,
         primary_ip: str = "127.0.0.1",
         data_directory: str = "",
@@ -315,6 +330,7 @@ class PrimaryImporterNode(ImporterNode):
             node_id: The unique ID of this node.
             num_workers: The number of worker instances to set up.
             system_user: The user + group to run the services as.
+            push_to_lp: True if publishing repositories to Launchpad.
             primary_port: The network port used for worker assignments.
             primary_ip: The IP or network location of the primary node.
             data_directory: The database and state info directory location.
@@ -341,7 +357,7 @@ class PrimaryImporterNode(ImporterNode):
 
         # Handle variable and worker updates.
         if not super().update(
-            force_refresh, node_id, num_workers, system_user, primary_port, primary_ip
+            force_refresh, node_id, num_workers, system_user, push_to_lp, primary_port, primary_ip
         ):
             return False
 
@@ -520,7 +536,7 @@ class EmptyImporterNode(ImporterNode):
 
     def __init__(self) -> None:
         """Initialize an empty representation of the node."""
-        super().__init__(0, 0, "", 0, "")
+        super().__init__(0, 0, "", False, 0, "")
 
     def install(self) -> bool:
         """Override install for empty node.

@@ -79,6 +79,12 @@ class GitUbuntuCharm(ops.CharmBase):
         return False
 
     @property
+    def _is_publishing_active(self) -> bool:
+        if self.config.get("publish"):
+            return True
+        return False
+
+    @property
     def _source_directory(self) -> str:
         return str(self.config.get("source_directory"))
 
@@ -102,6 +108,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._node_id,
                 self._num_workers,
                 self._system_username,
+                self._is_publishing_active,
                 self._controller_port,
                 self._data_directory,
                 self._source_directory,
@@ -111,6 +118,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._node_id,
                 self._num_workers,
                 self._system_username,
+                self._is_publishing_active,
                 self._controller_port,
                 self._controller_ip,
             )
@@ -146,6 +154,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._node_id,
                 self._num_workers,
                 self._system_username,
+                self._is_publishing_active,
                 self._controller_port,
                 "127.0.0.1",
                 data_directory=self._data_directory,
@@ -166,6 +175,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._node_id,
                 self._num_workers,
                 self._system_username,
+                self._is_publishing_active,
                 self._controller_port,
                 self._controller_ip,
             ):

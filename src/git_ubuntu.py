@@ -316,6 +316,7 @@ class GitUbuntuWorker(GitUbuntu):
         user: str,
         group: str,
         worker_name: str = "",
+        push_to_lp: bool = True,
         broker_ip: str = "127.0.0.1",
         broker_port: int = 1692,
     ) -> bool:
@@ -325,6 +326,7 @@ class GitUbuntuWorker(GitUbuntu):
             user: The user to run the service as.
             group: The permissions group to run the service as.
             worker_name: The unique worker ID to add to the service filename.
+            push_to_lp: True if publishing repositories to Launchpad.
             broker_ip: The IP address of the broker process' node.
             broker_port: The network port that the broker provides tasks on.
 
@@ -336,9 +338,10 @@ class GitUbuntuWorker(GitUbuntu):
             return False
 
         filename = f"git-ubuntu-importer-service-worker{worker_name}.service"
-        exec_start = (
-            f"/snap/bin/git-ubuntu importer-service-worker %i tcp://{broker_ip}:{broker_port}"
-        )
+
+        publish_arg = " --no-push" if not push_to_lp else ""
+        broker_url = f"tcp://{broker_ip}:{broker_port}"
+        exec_start = f"/snap/bin/git-ubuntu importer-service-worker{publish_arg} %i {broker_url}"
 
         service_string = generate_systemd_service_string(
             "git-ubuntu importer service worker",
