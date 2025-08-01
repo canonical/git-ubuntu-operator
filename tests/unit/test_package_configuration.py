@@ -14,6 +14,42 @@ import package_configuration as pkgs
 
 
 @patch("package_configuration.system")
+def test_git_update_user_name_config_success(mock_system):
+    """Test successful git user name config update."""
+    mock_system.return_value = 0
+
+    assert pkgs.git_update_user_name_config("Test User")
+    mock_system.assert_called_once_with('git config --global user.name "Test User"')
+
+
+@patch("package_configuration.system")
+def test_git_update_user_name_config_fail(mock_system):
+    """Test failed git user name config update."""
+    mock_system.return_value = 256
+
+    assert not pkgs.git_update_user_name_config("Test User")
+    mock_system.assert_called_once_with('git config --global user.name "Test User"')
+
+
+@patch("package_configuration.system")
+def test_git_update_user_email_config_success(mock_system):
+    """Test successful git user email config update."""
+    mock_system.return_value = 0
+
+    assert pkgs.git_update_user_email_config("test@example.com")
+    mock_system.assert_called_once_with('git config --global user.email "test@example.com"')
+
+
+@patch("package_configuration.system")
+def test_git_update_user_email_config_fail(mock_system):
+    """Test failed git user email config update."""
+    mock_system.return_value = 256
+
+    assert not pkgs.git_update_user_email_config("test@example.com")
+    mock_system.assert_called_once_with('git config --global user.email "test@example.com"')
+
+
+@patch("package_configuration.system")
 def test_lp_user_config_success(mock_system):
     """Test successful launchpad user config update."""
     mock_system.return_value = 0
@@ -24,7 +60,7 @@ def test_lp_user_config_success(mock_system):
 
 @patch("package_configuration.system")
 def test_lp_user_config_fail(mock_system):
-    """Test successful launchpad user config update."""
+    """Test failed launchpad user config update."""
     mock_system.return_value = 256
 
     assert not pkgs.git_update_lpuser_config("test-lp-user")

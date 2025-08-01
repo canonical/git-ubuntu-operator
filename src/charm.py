@@ -199,6 +199,17 @@ class GitUbuntuCharm(ops.CharmBase):
         else:
             self.unit.status = ops.BlockedStatus("Failed to start services.")
 
+    def _update_git_user_config(self) -> bool:
+        """Attempt to update git config with the default git-ubuntu user name and email."""
+        name = "Ubuntu Git Importer"
+        email = "usd-importer-do-not-mail@canonical.com"
+        if not pkgs.git_update_user_name_config(name) or not pkgs.git_update_user_email_config(
+            email
+        ):
+            self.unit.status = ops.BlockedStatus("Failed to set git user config.")
+            return False
+        return True
+
     def _update_lpuser_config(self) -> bool:
         """Attempt to update git config with the new Launchpad User ID."""
         lpuser = self._lp_username
@@ -237,6 +248,9 @@ class GitUbuntuCharm(ops.CharmBase):
 
         if not pkgs.git_install():
             self.unit.status = ops.BlockedStatus("Failed to install git")
+            return
+
+        if not self._update_git_user_config():
             return
 
         if not self._update_lpuser_config():

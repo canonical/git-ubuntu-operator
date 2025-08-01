@@ -13,6 +13,36 @@ from charms.operator_libs_linux.v2 import snap
 logger = logging.getLogger(__name__)
 
 
+def git_update_user_name_config(name: str) -> bool:
+    """Update the git user full name entry.
+
+    Args:
+        name: The full name for the git user.
+
+    Returns:
+        True if config update succeeded, False otherwise.
+    """
+    update_config_result = system(f'git config --global user.name "{name}"')
+    if update_config_result != 0:
+        return False
+    return True
+
+
+def git_update_user_email_config(email: str) -> bool:
+    """Update the git user email address entry.
+
+    Args:
+        email: The email address for the git user.
+
+    Returns:
+        True if config update succeeded, False otherwise.
+    """
+    update_config_result = system(f'git config --global user.email "{email}"')
+    if update_config_result != 0:
+        return False
+    return True
+
+
 def git_update_lpuser_config(lp_username: str) -> bool:
     """Update the launchpad user setting for git.
 
