@@ -120,6 +120,66 @@ class GitUbuntuCharm(ops.CharmBase):
         else:
             self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
 
+    def _refresh_importer_node(self) -> None:
+        """Check existing importer node and re-initialize its services as needed."""
+        run_install = False
+        update_fail = False
+
+        # Initialize the instance manager if it has yet to be.
+        if isinstance(self._git_ubuntu_importer_node, EmptyImporterNode):
+            run_install = True
+
+        # Update git-ubuntu instances.
+        elif self._is_primary:
+            # This node is becoming the primary node but is secondary.
+            if not isinstance(self._git_ubuntu_importer_node, PrimaryImporterNode):
+                if not self._git_ubuntu_importer_node.destroy():
+                    self.unit.status = ops.BlockedStatus("Failed to destroy existing services.")
+                    return
+                run_install = True
+
+            # Update primary node with new values.
+            elif isinstance(
+                self._git_ubuntu_importer_node, PrimaryImporterNode
+            ) and not self._git_ubuntu_importer_node.update(  # pylint: disable=unexpected-keyword-arg
+                False,
+                self._node_id,
+                self._num_workers,
+                self._system_username,
+                self._controller_port,
+                "127.0.0.1",
+                data_directory=self._data_directory,
+                source_directory=self._source_directory,
+            ):
+                update_fail = True
+        else:
+            # This node is becoming secondary but is the primary.
+            if isinstance(self._git_ubuntu_importer_node, PrimaryImporterNode):
+                if not self._git_ubuntu_importer_node.destroy():
+                    self.unit.status = ops.BlockedStatus("Failed to destroy existing services.")
+                    return
+                run_install = True
+
+            # Update primary node with new values.
+            elif not self._git_ubuntu_importer_node.update(
+                False,
+                self._node_id,
+                self._num_workers,
+                self._system_username,
+                self._controller_port,
+                self._controller_ip,
+            ):
+                update_fail = True
+
+        if run_install:
+            # Initialize and install a new node.
+            self._init_importer_node()
+        elif update_fail:
+            # Show that service updates failed.
+            self.unit.status = ops.BlockedStatus("Failed to update services.")
+        else:
+            self.unit.status = ops.ActiveStatus("Ready")
+
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
         if isinstance(self._git_ubuntu_importer_node, EmptyImporterNode):
@@ -195,63 +255,8 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
             return
 
-        run_install = False
-        update_fail = False
-
-        # Initialize the instance manager if it has yet to be.
-        if isinstance(self._git_ubuntu_importer_node, EmptyImporterNode):
-            run_install = True
-
-        # Update git-ubuntu instances.
-        elif self._is_primary:
-            # This node is becoming the primary node but is secondary.
-            if not isinstance(self._git_ubuntu_importer_node, PrimaryImporterNode):
-                if not self._git_ubuntu_importer_node.destroy():
-                    self.unit.status = ops.BlockedStatus("Failed to destroy existing services.")
-                    return
-                run_install = True
-
-            # Update primary node with new values.
-            elif isinstance(
-                self._git_ubuntu_importer_node, PrimaryImporterNode
-            ) and not self._git_ubuntu_importer_node.update(  # pylint: disable=unexpected-keyword-arg
-                False,
-                self._node_id,
-                self._num_workers,
-                self._system_username,
-                self._controller_port,
-                "127.0.0.1",
-                data_directory=self._data_directory,
-                source_directory=self._source_directory,
-            ):
-                update_fail = True
-        else:
-            # This node is becoming secondary but is the primary.
-            if isinstance(self._git_ubuntu_importer_node, PrimaryImporterNode):
-                if not self._git_ubuntu_importer_node.destroy():
-                    self.unit.status = ops.BlockedStatus("Failed to destroy existing services.")
-                    return
-                run_install = True
-
-            # Update primary node with new values.
-            elif not self._git_ubuntu_importer_node.update(
-                False,
-                self._node_id,
-                self._num_workers,
-                self._system_username,
-                self._controller_port,
-                self._controller_ip,
-            ):
-                update_fail = True
-
-        if run_install:
-            # Initialize and install a new node.
-            self._init_importer_node()
-        elif update_fail:
-            # Show that service updates failed.
-            self.unit.status = ops.BlockedStatus("Failed to update services.")
-        else:
-            self.unit.status = ops.ActiveStatus("Ready")
+        # Re-install git-ubuntu services as needed.
+        self._refresh_importer_node()
 
 
 if __name__ == "__main__":  # pragma: nocover
