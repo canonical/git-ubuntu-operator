@@ -206,7 +206,9 @@ class GitUbuntuCharm(ops.CharmBase):
         elif self._is_primary:
             # This node is becoming the primary node but is secondary.
             if not isinstance(self._git_ubuntu_importer_node, PrimaryImporterNode):
-                self._git_ubuntu_importer_node.destroy()
+                if not self._git_ubuntu_importer_node.destroy():
+                    self.unit.status = ops.BlockedStatus("Failed to destroy existing services.")
+                    return
                 run_install = True
 
             # Update primary node with new values.
@@ -226,7 +228,9 @@ class GitUbuntuCharm(ops.CharmBase):
         else:
             # This node is becoming secondary but is the primary.
             if isinstance(self._git_ubuntu_importer_node, PrimaryImporterNode):
-                self._git_ubuntu_importer_node.destroy()
+                if not self._git_ubuntu_importer_node.destroy():
+                    self.unit.status = ops.BlockedStatus("Failed to destroy existing services.")
+                    return
                 run_install = True
 
             # Update primary node with new values.
