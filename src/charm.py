@@ -94,7 +94,7 @@ class GitUbuntuCharm(ops.CharmBase):
         return 0
 
     def _init_importer_node(self) -> None:
-        """Initialize the git-ubuntu instance manager with current settings."""
+        """Initialize the git-ubuntu instance manager and install services."""
         if self._is_primary:
             self._git_ubuntu_importer_node = PrimaryImporterNode(
                 self._node_id,
@@ -112,6 +112,11 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._controller_port,
                 self._controller_ip,
             )
+
+        if self._git_ubuntu_importer_node.install():
+            self.unit.status = ops.ActiveStatus("Ready")
+        else:
+            self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
@@ -176,9 +181,6 @@ class GitUbuntuCharm(ops.CharmBase):
 
         # Initialize git-ubuntu instance manager
         self._init_importer_node()
-        self._git_ubuntu_importer_node.install()
-
-        self.unit.status = ops.ActiveStatus("Ready")
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle updates to config items."""
@@ -239,8 +241,6 @@ class GitUbuntuCharm(ops.CharmBase):
         if run_install:
             # Initialize and install a new node.
             self._init_importer_node()
-            if not self._git_ubuntu_importer_node.install():
-                self.unit.status = ops.BlockedStatus("Failed to install new services.")
         elif update_fail:
             # Show that service updates failed.
             self.unit.status = ops.BlockedStatus("Failed to update services.")
