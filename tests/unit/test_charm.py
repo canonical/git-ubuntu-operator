@@ -37,7 +37,9 @@ def test_start_empty_importer_node(ctx, base_state):
 @patch("charms.operator_libs_linux.v0.apt.add_package")
 @patch("charm.GitUbuntuCharm._update_lpuser_config")
 @patch("charm.GitUbuntuCharm._update_git_ubuntu_snap")
+@patch("importer_node.PrimaryImporterNode.install")
 def test_install_success(
+    mock_install,
     mock_update_git_ubuntu_snap,
     mock_update_lpuser_config,
     mock_add_package,
@@ -48,6 +50,7 @@ def test_install_success(
     """Test successful installation with valid config."""
     mock_update_lpuser_config.return_value = True
     mock_update_git_ubuntu_snap.return_value = True
+    mock_install.return_value = True
 
     out = ctx.run(ctx.on.install(), base_state)
 
@@ -63,12 +66,19 @@ def test_install_success(
 @patch("charms.operator_libs_linux.v0.apt.add_package")
 @patch("charm.GitUbuntuCharm._update_lpuser_config")
 @patch("charm.GitUbuntuCharm._update_git_ubuntu_snap")
+@patch("importer_node.ImporterNode.install")
 def test_install_secondary_success(
-    mock_update_git_ubuntu_snap, mock_update_lpuser_config, mock_add_package, mock_apt_update, ctx
+    mock_install,
+    mock_update_git_ubuntu_snap,
+    mock_update_lpuser_config,
+    mock_add_package,
+    mock_apt_update,
+    ctx,
 ):
     """Test successful installation when primary is False."""
     mock_update_lpuser_config.return_value = True
     mock_update_git_ubuntu_snap.return_value = True
+    mock_install.return_value = True
     state = State(config={"primary": False})
 
     out = ctx.run(ctx.on.install(), state)
