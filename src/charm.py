@@ -95,6 +95,8 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _init_importer_node(self) -> None:
         """Initialize the git-ubuntu instance manager and install services."""
+        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu services.")
+
         if self._is_primary:
             self._git_ubuntu_importer_node = PrimaryImporterNode(
                 self._node_id,
