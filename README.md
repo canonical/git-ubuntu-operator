@@ -1,5 +1,5 @@
 # Git-Ubuntu Operator
-[![CI](https://github.com/canonical/git-ubuntu-operator/actions/workflows/test.yaml/badge.svg)](https://github.com/canonical/git-ubuntu-operator/actions/workflows/test.yaml)
+[![Git-Ubuntu Package Importer Charm](https://charmhub.io/git-ubuntu/badge.svg)](https://charmhub.io/git-ubuntu) [![CI](https://github.com/canonical/git-ubuntu-operator/actions/workflows/test.yaml/badge.svg)](https://github.com/canonical/git-ubuntu-operator/actions/workflows/test.yaml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 **Git-Ubuntu Operator** is a [charm](https://juju.is/charms-architecture)
