@@ -6,7 +6,6 @@
 
 import abc
 import logging
-from pathlib import Path
 
 from charmlibs import pathops
 
@@ -186,7 +185,7 @@ class GitUbuntu:
             return False
 
         try:
-            Path(f"/etc/systemd/system/{self._service_file}").unlink(missing_ok=True)
+            pathops.LocalPath("/etc/systemd/system/", self._service_file).unlink(missing_ok=True)
         except (PermissionError, IOError, OSError) as e:
             logger.error("Failed to remove service file %s: %s", self._service_file, str(e))
             return False
@@ -264,7 +263,7 @@ class GitUbuntuPoller(GitUbuntu):
         self,
         user: str,
         group: str,
-        denylist: Path = Path(
+        denylist: pathops.LocalPath = pathops.LocalPath(
             "/home/ubuntu/live-allowlist-denylist-source/gitubuntu/source-package-denylist.txt"
         ),
         proxy: str = "",
