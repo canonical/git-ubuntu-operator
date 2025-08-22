@@ -33,17 +33,15 @@ def test_init_creates_correct_instances(default_node):
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_data_directory_update_same_success(
-    mock_mkdir, mock_isdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
+    mock_mkdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
 ):
     """Test data_directory update attempt with same name."""
     assert default_node._update_data_directory("/var/local/git-ubuntu")
 
     mock_mkdir.assert_not_called()
-    mock_isdir.assert_not_called()
     mock_exists.assert_not_called()
     mock_move.assert_not_called()
     mock_stop.assert_not_called()
@@ -55,12 +53,10 @@ def test_data_directory_update_same_success(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_data_directory_update_exists_success(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_move,
     mock_stop,
@@ -72,7 +68,6 @@ def test_data_directory_update_exists_success(
     """Test data_directory update attempt when db already exists."""
     mock_mkdir.side_effect = FileExistsError()
     mock_stop.return_value = True
-    mock_isdir.return_value = True
     mock_exists.return_value = True
     mock_destroy.return_value = True
     mock_poller_setup.return_value = True
@@ -81,7 +76,6 @@ def test_data_directory_update_exists_success(
     assert default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_called_once()
     mock_exists.assert_called_once()
     mock_move.assert_not_called()
     mock_stop.assert_called_once_with(stop_workers=False)
@@ -95,12 +89,10 @@ def test_data_directory_update_exists_success(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_data_directory_update_folder_exists_success(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_move,
     mock_stop,
@@ -112,7 +104,6 @@ def test_data_directory_update_folder_exists_success(
     """Test data_directory update attempt when new folder already exists."""
     mock_mkdir.side_effect = FileExistsError()
     mock_stop.return_value = True
-    mock_isdir.return_value = True
     mock_exists.return_value = False
     mock_destroy.return_value = True
     mock_poller_setup.return_value = True
@@ -121,7 +112,6 @@ def test_data_directory_update_folder_exists_success(
     assert default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_called_once()
     mock_exists.assert_called()
     mock_move.assert_not_called()
     mock_stop.assert_called_once_with(stop_workers=False)
@@ -133,20 +123,17 @@ def test_data_directory_update_folder_exists_success(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_data_directory_update_mkdir_file_fail(
-    mock_mkdir, mock_isdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
+    mock_mkdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
 ):
     """Test data_directory update attempt with new directory being an existing file."""
-    mock_mkdir.side_effect = FileExistsError()
-    mock_isdir.return_value = False
+    mock_mkdir.side_effect = NotADirectoryError()
 
     assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_called_once()
     mock_exists.assert_not_called()
     mock_move.assert_not_called()
     mock_stop.assert_not_called()
@@ -156,11 +143,10 @@ def test_data_directory_update_mkdir_file_fail(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_data_directory_update_permission_fail(
-    mock_mkdir, mock_isdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
+    mock_mkdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
 ):
     """Test data_directory update attempt with a permission error on mkdir."""
     mock_mkdir.side_effect = PermissionError()
@@ -168,7 +154,6 @@ def test_data_directory_update_permission_fail(
     assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_not_called()
     mock_exists.assert_not_called()
     mock_move.assert_not_called()
     mock_stop.assert_not_called()
@@ -178,19 +163,17 @@ def test_data_directory_update_permission_fail(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
-def test_data_directory_update_os_fail(
-    mock_mkdir, mock_isdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
+def test_data_directory_update_user_lookup_fail(
+    mock_mkdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
 ):
-    """Test data_directory update attempt with an OS error on mkdir."""
-    mock_mkdir.side_effect = OSError()
+    """Test data_directory update attempt with a user/group check error."""
+    mock_mkdir.side_effect = LookupError()
 
     assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_not_called()
     mock_exists.assert_not_called()
     mock_move.assert_not_called()
     mock_stop.assert_not_called()
@@ -200,11 +183,10 @@ def test_data_directory_update_os_fail(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_data_directory_stop_fail(
-    mock_mkdir, mock_isdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
+    mock_mkdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
 ):
     """Test data_directory update attempt when git-ubuntu fails to stop."""
     mock_stop.return_value = False
@@ -212,7 +194,6 @@ def test_data_directory_stop_fail(
     assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_not_called()
     mock_exists.assert_not_called()
     mock_move.assert_not_called()
     mock_stop.assert_called_once_with(stop_workers=False)
@@ -224,12 +205,10 @@ def test_data_directory_stop_fail(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_data_directory_destroy_fail(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_move,
     mock_stop,
@@ -246,7 +225,6 @@ def test_data_directory_destroy_fail(
     assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_not_called()
     mock_exists.assert_called_once()
     mock_move.assert_not_called()
     mock_stop.assert_called_once_with(stop_workers=False)
@@ -260,12 +238,10 @@ def test_data_directory_destroy_fail(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_data_directory_poller_fail(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_move,
     mock_stop,
@@ -284,7 +260,6 @@ def test_data_directory_poller_fail(
     assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_not_called()
     mock_exists.assert_called_once()
     mock_move.assert_not_called()
     mock_stop.assert_called_once_with(stop_workers=False)
@@ -298,12 +273,10 @@ def test_data_directory_poller_fail(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.move")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_data_directory_broker_fail(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_move,
     mock_stop,
@@ -322,7 +295,6 @@ def test_data_directory_broker_fail(
     assert not default_node._update_data_directory("/var/new/git-ubuntu")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_not_called()
     mock_exists.assert_called_once()
     mock_move.assert_not_called()
     mock_stop.assert_called_once_with(stop_workers=False)
@@ -335,12 +307,10 @@ def test_data_directory_broker_fail(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_source_directory_update_same_success(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_rmtree,
     mock_stop,
@@ -352,7 +322,6 @@ def test_source_directory_update_same_success(
     assert default_node._update_source_directory("/home/ubuntu")
 
     mock_mkdir.assert_not_called()
-    mock_isdir.assert_not_called()
     mock_exists.assert_not_called()
     mock_rmtree.assert_not_called()
     mock_stop.assert_not_called()
@@ -365,12 +334,10 @@ def test_source_directory_update_same_success(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_source_directory_update_source_exists_success(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_rmtree,
     mock_stop,
@@ -382,7 +349,6 @@ def test_source_directory_update_source_exists_success(
     """Test source_directory update attempt when source already exists."""
     mock_mkdir.side_effect = FileExistsError()
     mock_stop.return_value = True
-    mock_isdir.return_value = True
     mock_exists.return_value = True
     mock_destroy.return_value = True
     mock_poller_setup.return_value = True
@@ -390,7 +356,6 @@ def test_source_directory_update_source_exists_success(
     assert default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_called_once()
     mock_exists.assert_called_once()
     mock_rmtree.assert_called_once_with(Path("/home/user2/live-allowlist-denylist-source"))
     mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
@@ -403,12 +368,10 @@ def test_source_directory_update_source_exists_success(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_source_directory_update_directory_exists_success(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_rmtree,
     mock_stop,
@@ -420,7 +383,6 @@ def test_source_directory_update_directory_exists_success(
     """Test source_directory update attempt when the new directory already exists."""
     mock_mkdir.side_effect = FileExistsError()
     mock_stop.return_value = True
-    mock_isdir.return_value = True
     mock_exists.return_value = False
     mock_clone.return_value = True
     mock_destroy.return_value = True
@@ -429,7 +391,6 @@ def test_source_directory_update_directory_exists_success(
     assert default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_called_once()
     mock_exists.assert_called_once()
     mock_rmtree.assert_not_called()
     mock_clone.assert_called_once()
@@ -443,12 +404,10 @@ def test_source_directory_update_directory_exists_success(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_source_directory_update_file_exists_fail(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_rmtree,
     mock_stop,
@@ -458,13 +417,11 @@ def test_source_directory_update_file_exists_fail(
     default_node,
 ):
     """Test source_directory update attempt when the new directory already exists as file."""
-    mock_mkdir.side_effect = FileExistsError()
-    mock_isdir.return_value = False
+    mock_mkdir.side_effect = NotADirectoryError()
 
     assert not default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_called_once()
     mock_exists.assert_not_called()
     mock_rmtree.assert_not_called()
     mock_clone.assert_not_called()
@@ -478,12 +435,10 @@ def test_source_directory_update_file_exists_fail(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_source_directory_update_permission_fail(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_rmtree,
     mock_stop,
@@ -498,7 +453,6 @@ def test_source_directory_update_permission_fail(
     assert not default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_not_called()
     mock_exists.assert_not_called()
     mock_rmtree.assert_not_called()
     mock_clone.assert_not_called()
@@ -512,12 +466,10 @@ def test_source_directory_update_permission_fail(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
-def test_source_directory_update_os_fail(
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
+def test_source_directory_update_user_lookup_fail(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_rmtree,
     mock_stop,
@@ -526,13 +478,12 @@ def test_source_directory_update_os_fail(
     mock_poller_setup,
     default_node,
 ):
-    """Test source_directory update attempt with OS error."""
-    mock_mkdir.side_effect = OSError()
+    """Test source_directory update attempt with a user/group lookup error."""
+    mock_mkdir.side_effect = LookupError()
 
     assert not default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_not_called()
     mock_exists.assert_not_called()
     mock_rmtree.assert_not_called()
     mock_clone.assert_not_called()
@@ -546,12 +497,10 @@ def test_source_directory_update_os_fail(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_source_directory_update_stop_fail(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_rmtree,
     mock_stop,
@@ -566,7 +515,6 @@ def test_source_directory_update_stop_fail(
     assert not default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_not_called()
     mock_exists.assert_not_called()
     mock_rmtree.assert_not_called()
     mock_clone.assert_not_called()
@@ -580,12 +528,10 @@ def test_source_directory_update_stop_fail(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_source_directory_update_rmtree_fail(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_rmtree,
     mock_stop,
@@ -597,14 +543,12 @@ def test_source_directory_update_rmtree_fail(
     """Test source_directory update attempt when rmtree fails."""
     mock_mkdir.side_effect = FileExistsError()
     mock_stop.return_value = True
-    mock_isdir.return_value = True
     mock_exists.return_value = True
     mock_rmtree.side_effect = OSError()
 
     assert not default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_called_once()
     mock_exists.assert_called_once()
     mock_rmtree.assert_called_once()
     mock_clone.assert_not_called()
@@ -618,12 +562,10 @@ def test_source_directory_update_rmtree_fail(
 @patch("importer_node.PrimaryImporterNode.destroy")
 @patch("importer_node.PrimaryImporterNode.stop")
 @patch("importer_node.rmtree")
-@patch("importer_node.Path.exists")
-@patch("importer_node.Path.is_dir")
-@patch("importer_node.Path.mkdir")
+@patch("importer_node.pathops.LocalPath.exists")
+@patch("importer_node.pathops.LocalPath.mkdir")
 def test_source_directory_update_clone_fail(
     mock_mkdir,
-    mock_isdir,
     mock_exists,
     mock_rmtree,
     mock_stop,
@@ -640,7 +582,6 @@ def test_source_directory_update_clone_fail(
     assert not default_node._update_source_directory("/home/user2")
 
     mock_mkdir.assert_called_once()
-    mock_isdir.assert_not_called()
     mock_exists.assert_called_once()
     mock_rmtree.assert_not_called()
     mock_clone.assert_called_once_with(Path("/home/user2"))

@@ -6,8 +6,9 @@
 
 import logging
 from os import system
-from pathlib import Path
 from shutil import move, rmtree
+
+from charmlibs import pathops
 
 from git_ubuntu import GitUbuntuBroker, GitUbuntuPoller, GitUbuntuWorker
 
@@ -204,7 +205,7 @@ class PrimaryImporterNode(ImporterNode):
 
         super().__init__(node_id, num_workers, system_user, push_to_lp, primary_port, "127.0.0.1")
 
-    def _clone_git_ubuntu_source(self, directory: Path) -> bool:
+    def _clone_git_ubuntu_source(self, directory: pathops.LocalPath) -> bool:
         """Clone the git-ubuntu git repo to a given directory.
 
         Returns:
@@ -216,7 +217,7 @@ class PrimaryImporterNode(ImporterNode):
             )
             return False
 
-        clone_dir = directory / self._git_ubuntu_source_subdir
+        clone_dir = pathops.LocalPath(directory, self._git_ubuntu_source_subdir)
         logger.info("Cloning git-ubuntu source to %s", clone_dir)
         result = system(f"git clone {self._git_ubuntu_source_url} {clone_dir}")
 
@@ -239,7 +240,7 @@ class PrimaryImporterNode(ImporterNode):
         if not self._poller.setup(
             self._user,
             self._user,
-            Path(self._source_dir)
+            pathops.LocalPath(self._source_dir)
             / self._git_ubuntu_source_subdir
             / "gitubuntu/source-package-denylist.txt",
         ):
@@ -369,7 +370,7 @@ class PrimaryImporterNode(ImporterNode):
         if poller_refresh_needed and not self._poller.setup(
             self._user,
             self._user,
-            Path(self._source_dir)
+            pathops.LocalPath(self._source_dir)
             / self._git_ubuntu_source_subdir
             / "gitubuntu/source-package-denylist.txt",
         ):
@@ -392,28 +393,29 @@ class PrimaryImporterNode(ImporterNode):
         if data_directory == self._data_dir:
             return True
 
-        new_dir = Path(data_directory)
+        new_dir = pathops.LocalPath(data_directory)
         new_dir_success = False
 
         # Create directory if it does not yet exist
         try:
-            new_dir.mkdir(parents=True)
+            new_dir.mkdir(parents=True, user=self._user, group=self._user)
             logger.info("Created new data directory %s.", data_directory)
             new_dir_success = True
         except FileExistsError:
-            if new_dir.is_dir():
-                logger.info("Data directory %s already exists.", data_directory)
-                new_dir_success = True
-            else:
-                logger.error(
-                    "Data directory location %s already exists as a file.", data_directory
-                )
+            logger.info("Data directory %s already exists.", data_directory)
+            new_dir_success = True
+        except NotADirectoryError:
+            logger.error("Data directory location %s already exists as a file.", data_directory)
         except PermissionError:
             logger.error(
                 "Unable to create new data directory %s: permission denied.", data_directory
             )
-        except OSError as e:
-            logger.error("Unable to create new data directory %s: %s", data_directory, e)
+        except LookupError:
+            logger.error(
+                "Unable to create new data directory %s: unknown user/group %s",
+                data_directory,
+                self._user,
+            )
 
         if not new_dir_success:
             return False
@@ -423,8 +425,8 @@ class PrimaryImporterNode(ImporterNode):
             return False
 
         # Check for existing database in new directory, if there is none then move the old one.
-        new_db_file = new_dir / "db"
-        old_db_file = Path(self._data_dir) / "db"
+        new_db_file = pathops.LocalPath(new_dir, "db")
+        old_db_file = pathops.LocalPath(self._data_dir, "db")
 
         if new_db_file.exists():
             logger.info(
@@ -447,7 +449,7 @@ class PrimaryImporterNode(ImporterNode):
             or not self._poller.setup(
                 self._user,
                 self._user,
-                Path(self._source_dir)
+                pathops.LocalPath(self._source_dir)
                 / self._git_ubuntu_source_subdir
                 / "gitubuntu/source-package-denylist.txt",
             )
@@ -469,28 +471,31 @@ class PrimaryImporterNode(ImporterNode):
         if source_directory == self._source_dir:
             return True
 
-        new_dir = Path(source_directory)
+        new_dir = pathops.LocalPath(source_directory)
         new_dir_success = False
 
         # Create directory if it does not yet exist
         try:
-            new_dir.mkdir(parents=True)
+            new_dir.mkdir(parents=True, user=self._user, group=self._user)
             logger.info("Created new source directory %s.", source_directory)
             new_dir_success = True
         except FileExistsError:
-            if new_dir.is_dir():
-                logger.info("Source directory %s already exists.", source_directory)
-                new_dir_success = True
-            else:
-                logger.error(
-                    "Source directory location %s already exists as a file.", source_directory
-                )
+            logger.info("Source directory %s already exists.", source_directory)
+            new_dir_success = True
+        except NotADirectoryError:
+            logger.error(
+                "Source directory location %s already exists as a file.", source_directory
+            )
         except PermissionError:
             logger.error(
                 "Unable to create new source directory %s: permission denied.", source_directory
             )
-        except OSError as e:
-            logger.error("Unable to create new source directory %s: %s", source_directory, e)
+        except LookupError:
+            logger.error(
+                "Unable to create new source directory %s: unknown user/group %s",
+                source_directory,
+                self._user,
+            )
 
         if not new_dir_success:
             return False
@@ -520,7 +525,7 @@ class PrimaryImporterNode(ImporterNode):
             or not self._poller.setup(
                 self._user,
                 self._user,
-                Path(self._source_dir)
+                pathops.LocalPath(self._source_dir)
                 / self._git_ubuntu_source_subdir
                 / "gitubuntu/source-package-denylist.txt",
             )
