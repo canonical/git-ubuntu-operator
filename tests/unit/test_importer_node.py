@@ -5,9 +5,9 @@
 
 """Unit tests for importer node management."""
 
-from pathlib import Path
 from unittest.mock import patch
 
+from charmlibs import pathops
 from pytest import fixture
 
 from git_ubuntu import GitUbuntuBroker, GitUbuntuPoller
@@ -357,7 +357,9 @@ def test_source_directory_update_source_exists_success(
 
     mock_mkdir.assert_called_once()
     mock_exists.assert_called_once()
-    mock_rmtree.assert_called_once_with(Path("/home/user2/live-allowlist-denylist-source"))
+    mock_rmtree.assert_called_once_with(
+        pathops.LocalPath("/home/user2/live-allowlist-denylist-source")
+    )
     mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
     mock_destroy.assert_called_once_with(destroy_broker=False, destroy_workers=False)
     mock_poller_setup.assert_called_once()
@@ -584,7 +586,7 @@ def test_source_directory_update_clone_fail(
     mock_mkdir.assert_called_once()
     mock_exists.assert_called_once()
     mock_rmtree.assert_not_called()
-    mock_clone.assert_called_once_with(Path("/home/user2"))
+    mock_clone.assert_called_once_with(pathops.LocalPath("/home/user2"))
     mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
     mock_destroy.assert_not_called()
     mock_poller_setup.assert_not_called()

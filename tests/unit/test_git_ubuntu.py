@@ -5,8 +5,9 @@
 
 """Unit tests for git-ubuntu instance classes."""
 
-from pathlib import Path
 from unittest.mock import patch
+
+from charmlibs import pathops
 
 from git_ubuntu import (
     GitUbuntuBroker,
@@ -529,7 +530,7 @@ def test_git_ubuntu_poller_setup_custom_denylist(mock_create_file):
     """Test GitUbuntuPoller setup with custom denylist path."""
     mock_create_file.return_value = True
     poller = GitUbuntuPoller()
-    custom_denylist = Path("/custom/path/denylist.txt")
+    custom_denylist = pathops.LocalPath("/custom/path/denylist.txt")
 
     result = poller.setup("ubuntu", "testgroup", denylist=custom_denylist)
 
