@@ -8,6 +8,8 @@ import abc
 import logging
 from pathlib import Path
 
+from charmlibs import pathops
+
 from service_management import daemon_reload, start_service, stop_service
 
 logger = logging.getLogger(__name__)
@@ -99,7 +101,7 @@ def generate_systemd_service_string(
 
 
 def create_systemd_service_file(filename: str, file_content: str) -> bool:
-    """Create a systemd service file in the service files directory.
+    """Create a systemd service file in the service files directory, belonging to root.
 
     Args:
         filename: The name of the service file to create.
@@ -109,10 +111,22 @@ def create_systemd_service_file(filename: str, file_content: str) -> bool:
         True if the file was created, False otherwise.
     """
     try:
-        with open(Path("/etc/systemd/system") / filename, "w", encoding="utf-8") as f:
-            f.write(file_content)
-    except (FileNotFoundError, PermissionError, IOError) as e:
-        logger.error("Failed to create service file %s: %s", filename, str(e))
+        service_file = pathops.LocalPath("/etc/systemd/system/", filename)
+        service_file.write_text(file_content, encoding="utf-8", user="root", group="root")
+    except (FileNotFoundError, NotADirectoryError) as e:
+        logger.error(
+            "Failed to create service file %s due to directory issues: %s", filename, str(e)
+        )
+        return False
+    except LookupError as e:
+        logger.error(
+            "Failed to create service file %s due to issues with root user: %s", filename, str(e)
+        )
+        return False
+    except PermissionError as e:
+        logger.error(
+            "Failed to create service file %s due to permission issues: %s", filename, str(e)
+        )
         return False
     return True
 
