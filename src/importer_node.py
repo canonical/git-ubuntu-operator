@@ -537,7 +537,7 @@ class PrimaryImporterNode(ImporterNode):
 
 
 class EmptyImporterNode(ImporterNode):
-    """A dummy importer node that does nothing."""
+    """A placeholder importer node that does nothing."""
 
     def __init__(self) -> None:
         """Initialize an empty representation of the node."""
