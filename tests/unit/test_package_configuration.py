@@ -20,7 +20,7 @@ def test_git_update_user_name_config_success(mock_run_command_as_user):
 
     assert pkgs.git_update_user_name_config("ubuntu", "Test User")
     mock_run_command_as_user.assert_called_once_with(
-        "ubuntu", 'git config --global user.name "Test User"'
+        "ubuntu", "git config --global user.name 'Test User'"
     )
 
 
@@ -31,7 +31,7 @@ def test_git_update_user_name_config_fail(mock_run_command_as_user):
 
     assert not pkgs.git_update_user_name_config("ubuntu", "Test User")
     mock_run_command_as_user.assert_called_once_with(
-        "ubuntu", 'git config --global user.name "Test User"'
+        "ubuntu", "git config --global user.name 'Test User'"
     )
 
 
@@ -42,7 +42,7 @@ def test_git_update_user_email_config_success(mock_run_command_as_user):
 
     assert pkgs.git_update_user_email_config("ubuntu", "test@example.com")
     mock_run_command_as_user.assert_called_once_with(
-        "ubuntu", 'git config --global user.email "test@example.com"'
+        "ubuntu", "git config --global user.email test@example.com"
     )
 
 
@@ -53,7 +53,7 @@ def test_git_update_user_email_config_fail(mock_run_command_as_user):
 
     assert not pkgs.git_update_user_email_config("ubuntu", "test@example.com")
     mock_run_command_as_user.assert_called_once_with(
-        "ubuntu", 'git config --global user.email "test@example.com"'
+        "ubuntu", "git config --global user.email test@example.com"
     )
 
 
@@ -64,7 +64,7 @@ def test_lp_user_config_success(mock_run_command_as_user):
 
     assert pkgs.git_update_lpuser_config("ubuntu", "test-lp-user")
     mock_run_command_as_user.assert_called_once_with(
-        "ubuntu", 'git config --global gitubuntu.lpuser "test-lp-user"'
+        "ubuntu", "git config --global gitubuntu.lpuser test-lp-user"
     )
 
 
@@ -75,7 +75,7 @@ def test_lp_user_config_fail(mock_run_command_as_user):
 
     assert not pkgs.git_update_lpuser_config("ubuntu", "test-lp-user")
     mock_run_command_as_user.assert_called_once_with(
-        "ubuntu", 'git config --global gitubuntu.lpuser "test-lp-user"'
+        "ubuntu", "git config --global gitubuntu.lpuser test-lp-user"
     )
 
 

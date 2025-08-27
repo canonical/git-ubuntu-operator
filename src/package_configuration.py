@@ -24,7 +24,7 @@ def git_update_user_name_config(user: str, name: str) -> bool:
     Returns:
         True if config update succeeded, False otherwise.
     """
-    return run_command_as_user(user, f'git config --global user.name "{name}"')
+    return run_command_as_user(user, f"git config --global user.name '{name}'")
 
 
 def git_update_user_email_config(user: str, email: str) -> bool:
@@ -37,7 +37,7 @@ def git_update_user_email_config(user: str, email: str) -> bool:
     Returns:
         True if config update succeeded, False otherwise.
     """
-    return run_command_as_user(user, f'git config --global user.email "{email}"')
+    return run_command_as_user(user, f"git config --global user.email {email}")
 
 
 def git_update_lpuser_config(user: str, lp_username: str) -> bool:
@@ -50,7 +50,7 @@ def git_update_lpuser_config(user: str, lp_username: str) -> bool:
     Returns:
         True if config update succeeded, False otherwise.
     """
-    return run_command_as_user(user, f'git config --global gitubuntu.lpuser "{lp_username}"')
+    return run_command_as_user(user, f"git config --global gitubuntu.lpuser {lp_username}")
 
 
 def git_install() -> bool:
