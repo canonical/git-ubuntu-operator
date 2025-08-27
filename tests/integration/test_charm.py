@@ -6,16 +6,16 @@
 """Integration tests."""
 
 import logging
-import yaml
-
 from pathlib import Path
 
 import jubilant
+import yaml
 
 logger = logging.getLogger(__name__)
 
 METADATA = yaml.safe_load(Path("./charmcraft.yaml").read_text())
 APP_NAME = METADATA["name"]
+
 
 def test_startup(charm: Path, juju: jubilant.Juju):
     """Test default startup without LP integration."""
