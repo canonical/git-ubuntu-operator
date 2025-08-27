@@ -264,9 +264,11 @@ class GitUbuntuCharm(ops.CharmBase):
             return
 
         # Install sqlite3 if this is the primary node
-        if self._is_primary and not pkgs.sqlite3_install():
-            self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
-            return
+        if self._is_primary:
+            self.unit.status = ops.MaintenanceStatus("Installing sqlite3")
+            if not pkgs.sqlite3_install():
+                self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
+                return
 
         # Install git-ubuntu snap
         if not self._update_git_ubuntu_snap():
@@ -282,9 +284,11 @@ class GitUbuntuCharm(ops.CharmBase):
             return
 
         # Install sqlite3 if this is now the primary node
-        if self._is_primary and not pkgs.sqlite3_install():
-            self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
-            return
+        if self._is_primary:
+            self.unit.status = ops.MaintenanceStatus("Installing sqlite3")
+            if not pkgs.sqlite3_install():
+                self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
+                return
 
         # Re-install git-ubuntu services as needed.
         self._refresh_importer_node()
