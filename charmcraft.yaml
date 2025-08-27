@@ -22,6 +22,8 @@ parts:
 charm-libs:
   - lib: operator-libs-linux.apt
     version: "0"
+  - lib: operator_libs_linux.passwd
+    version: "0"
   - lib: operator-libs-linux.snap
     version: "2"
   - lib: operator_libs_linux.systemd
