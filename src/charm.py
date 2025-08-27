@@ -19,6 +19,7 @@ import ops
 import launchpad as lp
 import package_configuration as pkgs
 from importer_node import EmptyImporterNode, ImporterNode, PrimaryImporterNode
+from user_management import setup_git_ubuntu_user
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -250,6 +251,12 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Failed to install git")
             return
 
+        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user")
+
+        # Create new system user if it does not yet exist
+        setup_git_ubuntu_user(self._system_username)
+
+        # Update system user's git config
         if not self._update_git_user_config():
             return
 

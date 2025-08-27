@@ -35,6 +35,7 @@ def test_start_empty_importer_node(ctx, base_state):
 
 @patch("charms.operator_libs_linux.v0.apt.update")
 @patch("charms.operator_libs_linux.v0.apt.add_package")
+@patch("charm.setup_git_ubuntu_user")
 @patch("charm.pkgs.git_update_user_name_config")
 @patch("charm.pkgs.git_update_user_email_config")
 @patch("charm.pkgs.git_update_lpuser_config")
@@ -46,6 +47,7 @@ def test_install_success(
     mock_git_update_lpuser_config,
     mock_git_update_user_email_config,
     mock_git_update_user_name_config,
+    mock_setup_git_ubuntu_user,
     mock_add_package,
     mock_apt_update,
     ctx,
@@ -64,6 +66,7 @@ def test_install_success(
 
     mock_apt_update.assert_called()
     mock_add_package.assert_has_calls([call("git"), call("sqlite3")])
+    mock_setup_git_ubuntu_user.assert_called_once_with("ubuntu")
     mock_git_update_user_name_config.assert_called_once()
     mock_git_update_user_email_config.assert_called_once()
     mock_git_update_lpuser_config.assert_called_once()
@@ -72,6 +75,7 @@ def test_install_success(
 
 @patch("charms.operator_libs_linux.v0.apt.update")
 @patch("charms.operator_libs_linux.v0.apt.add_package")
+@patch("charm.setup_git_ubuntu_user")
 @patch("charm.pkgs.git_update_user_name_config")
 @patch("charm.pkgs.git_update_user_email_config")
 @patch("charm.pkgs.git_update_lpuser_config")
@@ -83,6 +87,7 @@ def test_install_secondary_success(
     mock_git_update_lpuser_config,
     mock_git_update_user_email_config,
     mock_git_update_user_name_config,
+    mock_setup_git_ubuntu_user,
     mock_add_package,
     mock_apt_update,
     ctx,
@@ -101,6 +106,7 @@ def test_install_secondary_success(
 
     mock_apt_update.assert_called_once()
     mock_add_package.assert_called_once_with("git")
+    mock_setup_git_ubuntu_user.assert_called_once_with("ubuntu")
     mock_git_update_user_name_config.assert_called_once()
     mock_git_update_user_email_config.assert_called_once()
     mock_git_update_lpuser_config.assert_called_once()
@@ -128,11 +134,13 @@ def test_install_apt_error(
 
 @patch("charms.operator_libs_linux.v0.apt.update")
 @patch("charms.operator_libs_linux.v0.apt.add_package")
+@patch("charm.setup_git_ubuntu_user")
 @patch("charm.pkgs.git_update_user_name_config")
 @patch("charm.pkgs.git_update_user_email_config")
 def test_install_invalid_lpuser(
     mock_git_update_user_email_config,
     mock_git_update_user_name_config,
+    mock_setup_git_ubuntu_user,
     mock_add_package,
     mock_update,
     ctx,
@@ -149,12 +157,14 @@ def test_install_invalid_lpuser(
 
     mock_update.assert_called_once()
     mock_add_package.assert_called_once_with("git")
+    mock_setup_git_ubuntu_user.assert_called_once_with("ubuntu")
     mock_git_update_user_name_config.assert_called_once()
     mock_git_update_user_email_config.assert_called_once()
 
 
 @patch("charms.operator_libs_linux.v0.apt.update")
 @patch("charms.operator_libs_linux.v0.apt.add_package")
+@patch("charm.setup_git_ubuntu_user")
 @patch("charm.pkgs.git_update_user_name_config")
 @patch("charm.pkgs.git_update_user_email_config")
 @patch("charm.pkgs.git_update_lpuser_config")
@@ -162,6 +172,7 @@ def test_install_invalid_channel(
     mock_git_update_lpuser_config,
     mock_git_update_user_email_config,
     mock_git_update_user_name_config,
+    mock_setup_git_ubuntu_user,
     mock_add_package,
     mock_update,
     ctx,
@@ -180,6 +191,7 @@ def test_install_invalid_channel(
 
     mock_update.assert_called()
     mock_add_package.assert_has_calls([call("git"), call("sqlite3")])
+    mock_setup_git_ubuntu_user.assert_called_once_with("ubuntu")
     mock_git_update_user_name_config.assert_called_once()
     mock_git_update_user_email_config.assert_called_once()
     mock_git_update_lpuser_config.assert_called_once()
