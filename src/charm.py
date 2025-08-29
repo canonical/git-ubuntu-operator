@@ -19,6 +19,7 @@ import ops
 import launchpad as lp
 import package_configuration as pkgs
 from importer_node import EmptyImporterNode, ImporterNode, PrimaryImporterNode
+from user_management import setup_git_ubuntu_user
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -130,6 +131,8 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _refresh_importer_node(self) -> None:
         """Check existing importer node and re-initialize its services as needed."""
+        self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu service files.")
+
         run_install = False
         update_fail = False
 
@@ -203,9 +206,9 @@ class GitUbuntuCharm(ops.CharmBase):
         """Attempt to update git config with the default git-ubuntu user name and email."""
         name = "Ubuntu Git Importer"
         email = "usd-importer-do-not-mail@canonical.com"
-        if not pkgs.git_update_user_name_config(name) or not pkgs.git_update_user_email_config(
-            email
-        ):
+        if not pkgs.git_update_user_name_config(
+            self._system_username, name
+        ) or not pkgs.git_update_user_email_config(self._system_username, email):
             self.unit.status = ops.BlockedStatus("Failed to set git user config.")
             return False
         return True
@@ -214,7 +217,7 @@ class GitUbuntuCharm(ops.CharmBase):
         """Attempt to update git config with the new Launchpad User ID."""
         lpuser = self._lp_username
         if lp.is_valid_lp_username(lpuser):
-            if not pkgs.git_update_lpuser_config(lpuser):
+            if not pkgs.git_update_lpuser_config(self._system_username, lpuser):
                 self.unit.status = ops.BlockedStatus("Failed to update lpuser config.")
                 return False
         else:
@@ -250,6 +253,12 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Failed to install git")
             return
 
+        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user")
+
+        # Create new system user if it does not yet exist
+        setup_git_ubuntu_user(self._system_username)
+
+        # Update system user's git config
         if not self._update_git_user_config():
             return
 
@@ -257,9 +266,11 @@ class GitUbuntuCharm(ops.CharmBase):
             return
 
         # Install sqlite3 if this is the primary node
-        if self._is_primary and not pkgs.sqlite3_install():
-            self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
-            return
+        if self._is_primary:
+            self.unit.status = ops.MaintenanceStatus("Installing sqlite3")
+            if not pkgs.sqlite3_install():
+                self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
+                return
 
         # Install git-ubuntu snap
         if not self._update_git_ubuntu_snap():
@@ -275,9 +286,11 @@ class GitUbuntuCharm(ops.CharmBase):
             return
 
         # Install sqlite3 if this is now the primary node
-        if self._is_primary and not pkgs.sqlite3_install():
-            self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
-            return
+        if self._is_primary:
+            self.unit.status = ops.MaintenanceStatus("Installing sqlite3")
+            if not pkgs.sqlite3_install():
+                self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
+                return
 
         # Re-install git-ubuntu services as needed.
         self._refresh_importer_node()

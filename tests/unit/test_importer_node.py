@@ -11,7 +11,7 @@ from charmlibs import pathops
 from pytest import fixture
 
 from git_ubuntu import GitUbuntuBroker, GitUbuntuPoller
-from importer_node import ImporterNode, PrimaryImporterNode
+from importer_node import EmptyImporterNode, ImporterNode, PrimaryImporterNode
 
 
 @fixture
@@ -590,3 +590,21 @@ def test_source_directory_update_clone_fail(
     mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
     mock_destroy.assert_not_called()
     mock_poller_setup.assert_not_called()
+
+
+def test_inheritance():
+    """Test node class inheritance by checking instances."""
+    empty_node = EmptyImporterNode()
+    assert isinstance(empty_node, EmptyImporterNode)
+    assert isinstance(empty_node, ImporterNode)
+    assert not isinstance(empty_node, PrimaryImporterNode)
+
+    primary_node = PrimaryImporterNode(0, 0, "", False, 0, "", "")
+    assert isinstance(primary_node, ImporterNode)
+    assert isinstance(primary_node, PrimaryImporterNode)
+    assert not isinstance(primary_node, EmptyImporterNode)
+
+    secondary_node = ImporterNode(0, 0, "", False, 0, "")
+    assert isinstance(secondary_node, ImporterNode)
+    assert not isinstance(secondary_node, PrimaryImporterNode)
+    assert not isinstance(secondary_node, EmptyImporterNode)
