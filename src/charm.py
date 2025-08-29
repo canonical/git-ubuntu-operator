@@ -131,6 +131,8 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _refresh_importer_node(self) -> None:
         """Check existing importer node and re-initialize its services as needed."""
+        self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu service files.")
+
         run_install = False
         update_fail = False
 
