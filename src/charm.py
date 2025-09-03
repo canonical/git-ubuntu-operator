@@ -264,7 +264,11 @@ class GitUbuntuCharm(ops.CharmBase):
         setup_git_ubuntu_user(self._system_username)
 
         # Update user's git and lpuser config, and git-ubuntu snap
-        if not self._update_git_user_config() or not self._update_lpuser_config() or not self._update_git_ubuntu_snap():
+        if (
+            not self._update_git_user_config()
+            or not self._update_lpuser_config()
+            or not self._update_git_ubuntu_snap()
+        ):
             return
 
         # Initialize or re-install git-ubuntu services as needed.
