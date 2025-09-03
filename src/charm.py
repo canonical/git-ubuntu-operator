@@ -258,6 +258,8 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
             return
 
+        self.unit.status = ops.ActiveStatus("Ready")
+
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle updates to config items."""
         self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user")
