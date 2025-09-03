@@ -125,7 +125,7 @@ class GitUbuntuCharm(ops.CharmBase):
             )
 
         if self._git_ubuntu_importer_node.install():
-            self.unit.status = ops.ActiveStatus("Ready")
+            self.unit.status = ops.ActiveStatus("Importer node install complete.")
         else:
             self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
 
@@ -191,7 +191,7 @@ class GitUbuntuCharm(ops.CharmBase):
             # Show that service updates failed.
             self.unit.status = ops.BlockedStatus("Failed to update services.")
         else:
-            self.unit.status = ops.ActiveStatus("Ready")
+            self.unit.status = ops.ActiveStatus("Importer node refresh complete.")
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
@@ -231,7 +231,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _update_git_ubuntu_snap(self) -> bool:
         """Install or refresh the git-ubuntu snap with the given channel version."""
-        self.unit.status = ops.MaintenanceStatus("Updating git-ubuntu snap")
+        self.unit.status = ops.MaintenanceStatus("Updating git-ubuntu snap.")
 
         # Confirm the channel is valid.
         channel = self._git_ubuntu_snap_channel
@@ -241,30 +241,30 @@ class GitUbuntuCharm(ops.CharmBase):
 
         # Install or refresh the git-ubuntu snap.
         if not pkgs.git_ubuntu_snap_refresh(channel):
-            self.unit.status = ops.BlockedStatus("Failed to install or refresh git-ubuntu snap")
+            self.unit.status = ops.BlockedStatus("Failed to install or refresh git-ubuntu snap.")
             return False
 
         return True
 
     def _on_install(self, _: ops.InstallEvent) -> None:
         """Handle one-time installation of packages during install hook."""
-        self.unit.status = ops.MaintenanceStatus("Installing git")
+        self.unit.status = ops.MaintenanceStatus("Installing git.")
 
         if not pkgs.git_install():
-            self.unit.status = ops.BlockedStatus("Failed to install git")
+            self.unit.status = ops.BlockedStatus("Failed to install git.")
             return
 
-        self.unit.status = ops.MaintenanceStatus("Installing sqlite3")
+        self.unit.status = ops.MaintenanceStatus("Installing sqlite3.")
 
         if not pkgs.sqlite3_install():
-            self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
+            self.unit.status = ops.BlockedStatus("Failed to install sqlite3.")
             return
 
-        self.unit.status = ops.ActiveStatus("Ready")
+        self.unit.status = ops.ActiveStatus("Install complete.")
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle updates to config items."""
-        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user")
+        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user.")
         setup_git_ubuntu_user(self._system_username)
 
         # Update user's git and lpuser config, and git-ubuntu snap
