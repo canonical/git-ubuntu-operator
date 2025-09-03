@@ -258,29 +258,16 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
             return
 
-        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user")
-
-        # Create new system user if it does not yet exist
-        setup_git_ubuntu_user(self._system_username)
-
-        # Update system user's git config
-        if not self._update_git_user_config():
-            return
-
-        if not self._update_lpuser_config():
-            return
-
-        # Install git-ubuntu snap
-        if not self._update_git_ubuntu_snap():
-            return
-
         # Initialize git-ubuntu instance manager
         self._init_importer_node()
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle updates to config items."""
-        # Update lpuser config and git-ubuntu snap
-        if not self._update_lpuser_config() or not self._update_git_ubuntu_snap():
+        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user")
+        setup_git_ubuntu_user(self._system_username)
+
+        # Update user's git and lpuser config, and git-ubuntu snap
+        if not self._update_git_user_config() or not self._update_lpuser_config() or not self._update_git_ubuntu_snap():
             return
 
         # Re-install git-ubuntu services as needed.
