@@ -204,6 +204,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _update_git_user_config(self) -> bool:
         """Attempt to update git config with the default git-ubuntu user name and email."""
+        self.unit.status = ops.MaintenanceStatus("Updating git config for git-ubuntu user.")
         name = "Ubuntu Git Importer"
         email = "usd-importer-do-not-mail@canonical.com"
         if not pkgs.git_update_user_name_config(
@@ -215,6 +216,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _update_lpuser_config(self) -> bool:
         """Attempt to update git config with the new Launchpad User ID."""
+        self.unit.status = ops.MaintenanceStatus("Updating lpuser entry for git-ubuntu user.")
         lpuser = self._lp_username
         if lp.is_valid_lp_username(lpuser):
             if not pkgs.git_update_lpuser_config(self._system_username, lpuser):
