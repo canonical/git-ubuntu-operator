@@ -245,12 +245,17 @@ class GitUbuntuCharm(ops.CharmBase):
         return True
 
     def _on_install(self, _: ops.InstallEvent) -> None:
-        """Handle install event."""
-        # Install git and update lp user
+        """Handle one-time installation of packages during install hook."""
         self.unit.status = ops.MaintenanceStatus("Installing git")
 
         if not pkgs.git_install():
             self.unit.status = ops.BlockedStatus("Failed to install git")
+            return
+
+        self.unit.status = ops.MaintenanceStatus("Installing sqlite3")
+
+        if not pkgs.sqlite3_install():
+            self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
             return
 
         self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user")
@@ -265,13 +270,6 @@ class GitUbuntuCharm(ops.CharmBase):
         if not self._update_lpuser_config():
             return
 
-        # Install sqlite3 if this is the primary node
-        if self._is_primary:
-            self.unit.status = ops.MaintenanceStatus("Installing sqlite3")
-            if not pkgs.sqlite3_install():
-                self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
-                return
-
         # Install git-ubuntu snap
         if not self._update_git_ubuntu_snap():
             return
@@ -284,13 +282,6 @@ class GitUbuntuCharm(ops.CharmBase):
         # Update lpuser config and git-ubuntu snap
         if not self._update_lpuser_config() or not self._update_git_ubuntu_snap():
             return
-
-        # Install sqlite3 if this is now the primary node
-        if self._is_primary:
-            self.unit.status = ops.MaintenanceStatus("Installing sqlite3")
-            if not pkgs.sqlite3_install():
-                self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
-                return
 
         # Re-install git-ubuntu services as needed.
         self._refresh_importer_node()
