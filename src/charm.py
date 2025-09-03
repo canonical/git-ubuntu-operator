@@ -258,9 +258,6 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
             return
 
-        # Initialize git-ubuntu instance manager
-        self._init_importer_node()
-
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle updates to config items."""
         self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user")
@@ -270,7 +267,7 @@ class GitUbuntuCharm(ops.CharmBase):
         if not self._update_git_user_config() or not self._update_lpuser_config() or not self._update_git_ubuntu_snap():
             return
 
-        # Re-install git-ubuntu services as needed.
+        # Initialize or re-install git-ubuntu services as needed.
         self._refresh_importer_node()
 
 
