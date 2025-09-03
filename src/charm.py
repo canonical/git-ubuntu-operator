@@ -114,6 +114,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._data_directory,
                 self._source_directory,
             )
+            logger.info("Initialized importer node as primary.")
         else:
             self._git_ubuntu_importer_node = ImporterNode(
                 self._node_id,
@@ -123,9 +124,11 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._controller_port,
                 self._controller_ip,
             )
+            logger.info("Initialized importer node as secondary.")
 
         if self._git_ubuntu_importer_node.install():
             self.unit.status = ops.ActiveStatus("Importer node install complete.")
+            logger.info("Importer node initialization complete.")
         else:
             self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
 
@@ -138,6 +141,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         # Initialize the instance manager if it has yet to be.
         if isinstance(self._git_ubuntu_importer_node, EmptyImporterNode):
+            logger.info("Importer node not yet initialized, running initialization.")
             run_install = True
 
         # Update git-ubuntu instances.
@@ -147,6 +151,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 if not self._git_ubuntu_importer_node.destroy():
                     self.unit.status = ops.BlockedStatus("Failed to destroy existing services.")
                     return
+                logger.info("Swapping importer node from secondary to primary.")
                 run_install = True
 
             # Update primary node with new values.
@@ -163,6 +168,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 data_directory=self._data_directory,
                 source_directory=self._source_directory,
             ):
+                logger.debug("Failed to update primary importer node with new values.")
                 update_fail = True
         else:
             # This node is becoming secondary but is the primary.
@@ -170,6 +176,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 if not self._git_ubuntu_importer_node.destroy():
                     self.unit.status = ops.BlockedStatus("Failed to destroy existing services.")
                     return
+                logger.info("Swapping importer node from primary to secondary.")
                 run_install = True
 
             # Update primary node with new values.
@@ -182,6 +189,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._controller_port,
                 self._controller_ip,
             ):
+                logger.debug("Failed to update secondary importer node with new values.")
                 update_fail = True
 
         if run_install:
@@ -191,6 +199,7 @@ class GitUbuntuCharm(ops.CharmBase):
             # Show that service updates failed.
             self.unit.status = ops.BlockedStatus("Failed to update services.")
         else:
+            logger.info("Importer node refresh complete.")
             self.unit.status = ops.ActiveStatus("Importer node refresh complete.")
 
     def _on_start(self, _: ops.StartEvent) -> None:
