@@ -30,6 +30,7 @@ VALID_LOG_LEVELS = ["info", "debug", "warning", "error", "critical"]
 GIT_UBUNTU_SYSTEM_USER_USERNAME = "git-ubuntu"
 GIT_UBUNTU_GIT_USER_NAME = "Ubuntu Git Importer"
 GIT_UBUNTU_GIT_EMAIL = "usd-importer-do-not-mail@canonical.com"
+GIT_UBUNTU_USER_HOME_DIR = "/var/local/git-ubuntu"
 
 
 class GitUbuntuCharm(ops.CharmBase):
@@ -62,10 +63,6 @@ class GitUbuntuCharm(ops.CharmBase):
     @property
     def _git_ubuntu_snap_channel(self) -> str:
         return str(self.config.get("channel"))
-
-    @property
-    def _data_directory(self) -> str:
-        return str(self.config.get("data_directory"))
 
     @property
     def _lp_username(self) -> str:
@@ -108,8 +105,8 @@ class GitUbuntuCharm(ops.CharmBase):
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 self._is_publishing_active,
                 self._controller_port,
-                self._data_directory,
-                self._data_directory,
+                GIT_UBUNTU_USER_HOME_DIR,
+                GIT_UBUNTU_USER_HOME_DIR,
             )
             logger.info("Initialized importer node as primary.")
         else:
@@ -162,8 +159,8 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._is_publishing_active,
                 self._controller_port,
                 "127.0.0.1",
-                data_directory=self._data_directory,
-                source_directory=self._data_directory,
+                data_directory=GIT_UBUNTU_USER_HOME_DIR,
+                source_directory=GIT_UBUNTU_USER_HOME_DIR,
             ):
                 logger.debug("Failed to update primary importer node with new values.")
                 update_fail = True
@@ -269,7 +266,7 @@ class GitUbuntuCharm(ops.CharmBase):
             return
 
         self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user.")
-        setup_git_ubuntu_user(GIT_UBUNTU_SYSTEM_USER_USERNAME, self._data_directory)
+        setup_git_ubuntu_user(GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR)
 
         self.unit.status = ops.ActiveStatus("Install complete.")
 

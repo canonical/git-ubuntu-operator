@@ -17,6 +17,7 @@ def setup_git_ubuntu_user(user: str, home_dir: str) -> None:
 
     Args:
         user: The user to create.
+        home_dir: The home directory for the user.
     """
     new_user = passwd.add_user(user, home_dir=home_dir, create_home=True)
     logger.info("Created user %s with home directory at %s.", new_user, home_dir)

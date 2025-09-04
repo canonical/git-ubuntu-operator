@@ -39,7 +39,7 @@ def test_install_success(
 
     mock_apt_update.assert_called()
     mock_add_package.assert_has_calls([call("git"), call("sqlite3")])
-    mock_setup_git_ubuntu_user.assert_called_once_with("git-ubuntu")
+    mock_setup_git_ubuntu_user.assert_called_once_with("git-ubuntu", "/var/local/git-ubuntu")
 
 
 @patch("charms.operator_libs_linux.v0.apt.update")
