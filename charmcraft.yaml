@@ -51,8 +51,8 @@ config:
     data_directory:
       description: |
         The directory to store state information in, including the sqlite
-        database for broker-poller interactions. This setting is only
-        relevant when primary is True.
+        database for broker-poller interactions. This is also the home
+        directory for the git-ubuntu system user.
       default: "/var/local/git-ubuntu"
       type: string
     lpuser:
@@ -79,13 +79,6 @@ config:
         testing.
       default: True
       type: boolean
-    source_directory:
-      description: |
-        The directory to download the git-ubuntu source in. The included source
-        is used to provide the package denylist to the poller. This option is
-        ignored for secondary nodes.
-      default: "/home/ubuntu"
-      type: string
     workers:
       description: |
         The number of git-ubuntu worker processes to maintain.

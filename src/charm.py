@@ -91,10 +91,6 @@ class GitUbuntuCharm(ops.CharmBase):
         return False
 
     @property
-    def _source_directory(self) -> str:
-        return str(self.config.get("source_directory"))
-
-    @property
     def _num_workers(self) -> int:
         num_workers = self.config.get("workers")
         if isinstance(num_workers, int):
@@ -113,7 +109,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._is_publishing_active,
                 self._controller_port,
                 self._data_directory,
-                self._source_directory,
+                self._data_directory,
             )
             logger.info("Initialized importer node as primary.")
         else:
@@ -167,7 +163,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._controller_port,
                 "127.0.0.1",
                 data_directory=self._data_directory,
-                source_directory=self._source_directory,
+                source_directory=self._data_directory,
             ):
                 logger.debug("Failed to update primary importer node with new values.")
                 update_fail = True
@@ -273,7 +269,7 @@ class GitUbuntuCharm(ops.CharmBase):
             return
 
         self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user.")
-        setup_git_ubuntu_user(GIT_UBUNTU_SYSTEM_USER_USERNAME)
+        setup_git_ubuntu_user(GIT_UBUNTU_SYSTEM_USER_USERNAME, self._data_directory)
 
         self.unit.status = ops.ActiveStatus("Install complete.")
 
