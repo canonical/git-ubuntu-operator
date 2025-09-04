@@ -86,11 +86,6 @@ config:
         ignored for secondary nodes.
       default: "/home/ubuntu"
       type: string
-    system_user:
-      description: |
-        The system user to run systemd services as.
-      default: "ubuntu"
-      type: string
     workers:
       description: |
         The number of git-ubuntu worker processes to maintain.
