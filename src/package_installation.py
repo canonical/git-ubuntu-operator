@@ -9,51 +9,7 @@ import logging
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v2 import snap
 
-from user_management import run_command_as_user
-
 logger = logging.getLogger(__name__)
-
-
-def git_update_user_name_config(user: str, name: str) -> bool:
-    """Update the git user full name entry.
-
-    Args:
-        user: The system user to update the config for.
-        name: The full name for the git user.
-
-    Returns:
-        True if config update succeeded, False otherwise.
-    """
-    logger.info("Setting git user.name to %s for user %s.", name, user)
-    return run_command_as_user(user, f"git config --global user.name '{name}'")
-
-
-def git_update_user_email_config(user: str, email: str) -> bool:
-    """Update the git user email address entry.
-
-    Args:
-        user: The system user to update the config for.
-        email: The email address for the git user.
-
-    Returns:
-        True if config update succeeded, False otherwise.
-    """
-    logger.info("Setting git user.email to %s for user %s.", email, user)
-    return run_command_as_user(user, f"git config --global user.email {email}")
-
-
-def git_update_lpuser_config(user: str, lp_username: str) -> bool:
-    """Update the launchpad user setting for git.
-
-    Args:
-        user: The system user to update the config for.
-        lp_username: The launchpad username set in git.
-
-    Returns:
-        True if config update succeeded, False otherwise.
-    """
-    logger.info("Setting git gitubuntu.lpuser to %s for user %s.", lp_username, user)
-    return run_command_as_user(user, f"git config --global gitubuntu.lpuser {lp_username}")
 
 
 def git_install() -> bool:

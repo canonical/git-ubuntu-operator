@@ -28,7 +28,7 @@ def base_state(ctx):
 
 @patch("charms.operator_libs_linux.v0.apt.update")
 @patch("charms.operator_libs_linux.v0.apt.add_package")
-@patch("charm.setup_git_ubuntu_user")
+@patch("charm.usr.setup_git_ubuntu_user")
 def test_install_success(
     mock_setup_git_ubuntu_user, mock_add_package, mock_apt_update, ctx, base_state
 ):

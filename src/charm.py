@@ -18,8 +18,8 @@ import ops
 
 import launchpad as lp
 import package_installation as pkgs
+import user_management as usr
 from importer_node import EmptyImporterNode, ImporterNode, PrimaryImporterNode
-from user_management import setup_git_ubuntu_user
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -210,11 +210,9 @@ class GitUbuntuCharm(ops.CharmBase):
         """Attempt to update git config with the default git-ubuntu user name and email."""
         self.unit.status = ops.MaintenanceStatus("Updating git config for git-ubuntu user.")
 
-        if not pkgs.git_update_user_name_config(
+        if not usr.update_git_user_name(
             GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_USER_NAME
-        ) or not pkgs.git_update_user_email_config(
-            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_EMAIL
-        ):
+        ) or not usr.update_git_email(GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_EMAIL):
             self.unit.status = ops.BlockedStatus("Failed to set git user config.")
             return False
         return True
@@ -224,7 +222,7 @@ class GitUbuntuCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("Updating lpuser entry for git-ubuntu user.")
         lpuser = self._lp_username
         if lp.is_valid_lp_username(lpuser):
-            if not pkgs.git_update_lpuser_config(GIT_UBUNTU_SYSTEM_USER_USERNAME, lpuser):
+            if not usr.update_git_ubuntu_lpuser(GIT_UBUNTU_SYSTEM_USER_USERNAME, lpuser):
                 self.unit.status = ops.BlockedStatus("Failed to update lpuser config.")
                 return False
         else:
@@ -266,7 +264,7 @@ class GitUbuntuCharm(ops.CharmBase):
             return
 
         self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user.")
-        setup_git_ubuntu_user(GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR)
+        usr.setup_git_ubuntu_user(GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR)
 
         self.unit.status = ops.ActiveStatus("Install complete.")
 
