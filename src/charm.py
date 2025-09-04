@@ -28,6 +28,8 @@ VALID_LOG_LEVELS = ["info", "debug", "warning", "error", "critical"]
 
 # Constant configuration values
 GIT_UBUNTU_SYSTEM_USER_USERNAME = "git-ubuntu"
+GIT_UBUNTU_GIT_USER_NAME = "Ubuntu Git Importer"
+GIT_UBUNTU_GIT_EMAIL = "usd-importer-do-not-mail@canonical.com"
 
 
 class GitUbuntuCharm(ops.CharmBase):
@@ -214,11 +216,12 @@ class GitUbuntuCharm(ops.CharmBase):
     def _update_git_user_config(self) -> bool:
         """Attempt to update git config with the default git-ubuntu user name and email."""
         self.unit.status = ops.MaintenanceStatus("Updating git config for git-ubuntu user.")
-        name = "Ubuntu Git Importer"
-        email = "usd-importer-do-not-mail@canonical.com"
+
         if not pkgs.git_update_user_name_config(
-            GIT_UBUNTU_SYSTEM_USER_USERNAME, name
-        ) or not pkgs.git_update_user_email_config(GIT_UBUNTU_SYSTEM_USER_USERNAME, email):
+            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_USER_NAME
+        ) or not pkgs.git_update_user_email_config(
+            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_EMAIL
+        ):
             self.unit.status = ops.BlockedStatus("Failed to set git user config.")
             return False
         return True
