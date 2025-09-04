@@ -22,11 +22,13 @@ def start_service(service_name: str) -> bool:
     """
     try:
         if not systemd.service_running(service_name):
+            logger.info("Starting systemd service %s.", service_name)
             return systemd.service_start(service_name)
     except systemd.SystemdError as e:
         logger.error("Failed to start %s: %s", service_name, str(e))
         return False
 
+    logger.debug("Systemd service %s is already running, leaving it alone.", service_name)
     return True
 
 
@@ -41,11 +43,13 @@ def stop_service(service_name: str) -> bool:
     """
     try:
         if systemd.service_running(service_name):
+            logger.info("Stopping systemd service %s.", service_name)
             return systemd.service_stop(service_name)
     except systemd.SystemdError as e:
         logger.error("Failed to stop %s: %s", service_name, str(e))
         return False
 
+    logger.debug("Systemd service %s is not running, leaving it alone.", service_name)
     return True
 
 
@@ -63,4 +67,5 @@ def daemon_reload() -> bool:
         logger.error("Failed to run daemon-reload: %s", str(e))
         return False
 
+    logger.info("Ran systemd daemon-reload successfully.")
     return True

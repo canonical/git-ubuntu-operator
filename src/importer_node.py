@@ -44,6 +44,22 @@ class ImporterNode:
         self._primary_ip = primary_ip
         self._workers = [GitUbuntuWorker() for _ in range(num_workers)]
 
+    def __str__(self) -> str:
+        """Return formatted secondary importer node info string.
+
+        Returns:
+            A string showing the secondary importer node's values.
+        """
+        return (
+            "Secondary Importer Node\n"
+            + f"\tID: {self._node_id}\n"
+            + f"\tUser: {self._user}\n"
+            + f"\tIP: {self._primary_ip}\n"
+            + f"\tPort: {self._port}\n"
+            + f"\tNum Workers: {len(self._workers)}\n"
+            + f"\tPush to Launchpad: {self._push_to_lp}"
+        )
+
     def _setup_worker(self, worker: GitUbuntuWorker, worker_number: int) -> bool:
         """Set up a worker with the current node settings.
 
@@ -204,6 +220,24 @@ class PrimaryImporterNode(ImporterNode):
         self._git_ubuntu_source_subdir = "live-allowlist-denylist-source"
 
         super().__init__(node_id, num_workers, system_user, push_to_lp, primary_port, "127.0.0.1")
+
+    def __str__(self) -> str:
+        """Return formatted primary node info string.
+
+        Returns:
+            A string showing the primary importer node's values.
+        """
+        return (
+            "Primary Importer Node\n"
+            + f"\tID: {self._node_id}\n"
+            + f"\tUser: {self._user}\n"
+            + f"\tIP: {self._primary_ip}\n"
+            + f"\tPort: {self._port}\n"
+            + f"\tNum Workers: {len(self._workers)}\n"
+            + f"\tData Directory: {self._data_dir}\n"
+            + f"\tSource Directory: {self._source_dir}\n"
+            + f"\tPush to Launchpad: {self._push_to_lp}"
+        )
 
     def _clone_git_ubuntu_source(self, directory: pathops.LocalPath) -> bool:
         """Clone the git-ubuntu git repo to a given directory.
@@ -542,6 +576,14 @@ class EmptyImporterNode(ImporterNode):
     def __init__(self) -> None:
         """Initialize an empty representation of the node."""
         super().__init__(0, 0, "", False, 0, "")
+
+    def __str__(self) -> str:
+        """Return string defining this as an empty node.
+
+        Returns:
+            Empty Importer Node as a str
+        """
+        return "Empty Importer Node"
 
     def install(self) -> bool:
         """Override install for empty node.

@@ -114,6 +114,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._data_directory,
                 self._source_directory,
             )
+            logger.info("Initialized importer node as primary.")
         else:
             self._git_ubuntu_importer_node = ImporterNode(
                 self._node_id,
@@ -123,9 +124,11 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._controller_port,
                 self._controller_ip,
             )
+            logger.info("Initialized importer node as secondary.")
 
         if self._git_ubuntu_importer_node.install():
-            self.unit.status = ops.ActiveStatus("Ready")
+            self.unit.status = ops.ActiveStatus("Importer node install complete.")
+            logger.info("Importer node initialization complete.")
         else:
             self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
 
@@ -138,6 +141,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         # Initialize the instance manager if it has yet to be.
         if isinstance(self._git_ubuntu_importer_node, EmptyImporterNode):
+            logger.info("Importer node not yet initialized, running initialization.")
             run_install = True
 
         # Update git-ubuntu instances.
@@ -147,6 +151,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 if not self._git_ubuntu_importer_node.destroy():
                     self.unit.status = ops.BlockedStatus("Failed to destroy existing services.")
                     return
+                logger.info("Swapping importer node from secondary to primary.")
                 run_install = True
 
             # Update primary node with new values.
@@ -163,6 +168,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 data_directory=self._data_directory,
                 source_directory=self._source_directory,
             ):
+                logger.debug("Failed to update primary importer node with new values.")
                 update_fail = True
         else:
             # This node is becoming secondary but is the primary.
@@ -170,6 +176,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 if not self._git_ubuntu_importer_node.destroy():
                     self.unit.status = ops.BlockedStatus("Failed to destroy existing services.")
                     return
+                logger.info("Swapping importer node from primary to secondary.")
                 run_install = True
 
             # Update primary node with new values.
@@ -182,6 +189,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._controller_port,
                 self._controller_ip,
             ):
+                logger.debug("Failed to update secondary importer node with new values.")
                 update_fail = True
 
         if run_install:
@@ -191,19 +199,22 @@ class GitUbuntuCharm(ops.CharmBase):
             # Show that service updates failed.
             self.unit.status = ops.BlockedStatus("Failed to update services.")
         else:
-            self.unit.status = ops.ActiveStatus("Ready")
+            logger.info("Importer node refresh complete.")
+            self.unit.status = ops.ActiveStatus("Importer node refresh complete.")
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
-        if isinstance(self._git_ubuntu_importer_node, EmptyImporterNode):
-            self.unit.status = ops.BlockedStatus("Failed to start, services not yet installed.")
-        elif self._git_ubuntu_importer_node.start():
-            self.unit.status = ops.ActiveStatus()
+        if self._git_ubuntu_importer_node.start():
+            node_type_str = "primary" if self._is_primary else "secondary"
+            self.unit.status = ops.ActiveStatus(
+                f"Running git-ubuntu importer {node_type_str} node."
+            )
         else:
             self.unit.status = ops.BlockedStatus("Failed to start services.")
 
     def _update_git_user_config(self) -> bool:
         """Attempt to update git config with the default git-ubuntu user name and email."""
+        self.unit.status = ops.MaintenanceStatus("Updating git config for git-ubuntu user.")
         name = "Ubuntu Git Importer"
         email = "usd-importer-do-not-mail@canonical.com"
         if not pkgs.git_update_user_name_config(
@@ -215,6 +226,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _update_lpuser_config(self) -> bool:
         """Attempt to update git config with the new Launchpad User ID."""
+        self.unit.status = ops.MaintenanceStatus("Updating lpuser entry for git-ubuntu user.")
         lpuser = self._lp_username
         if lp.is_valid_lp_username(lpuser):
             if not pkgs.git_update_lpuser_config(self._system_username, lpuser):
@@ -229,7 +241,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _update_git_ubuntu_snap(self) -> bool:
         """Install or refresh the git-ubuntu snap with the given channel version."""
-        self.unit.status = ops.MaintenanceStatus("Updating git-ubuntu snap")
+        self.unit.status = ops.MaintenanceStatus("Updating git-ubuntu snap.")
 
         # Confirm the channel is valid.
         channel = self._git_ubuntu_snap_channel
@@ -239,60 +251,41 @@ class GitUbuntuCharm(ops.CharmBase):
 
         # Install or refresh the git-ubuntu snap.
         if not pkgs.git_ubuntu_snap_refresh(channel):
-            self.unit.status = ops.BlockedStatus("Failed to install or refresh git-ubuntu snap")
+            self.unit.status = ops.BlockedStatus("Failed to install or refresh git-ubuntu snap.")
             return False
 
         return True
 
     def _on_install(self, _: ops.InstallEvent) -> None:
-        """Handle install event."""
-        # Install git and update lp user
-        self.unit.status = ops.MaintenanceStatus("Installing git")
+        """Handle one-time installation of packages during install hook."""
+        self.unit.status = ops.MaintenanceStatus("Installing git.")
 
         if not pkgs.git_install():
-            self.unit.status = ops.BlockedStatus("Failed to install git")
+            self.unit.status = ops.BlockedStatus("Failed to install git.")
             return
 
-        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user")
+        self.unit.status = ops.MaintenanceStatus("Installing sqlite3.")
 
-        # Create new system user if it does not yet exist
-        setup_git_ubuntu_user(self._system_username)
-
-        # Update system user's git config
-        if not self._update_git_user_config():
+        if not pkgs.sqlite3_install():
+            self.unit.status = ops.BlockedStatus("Failed to install sqlite3.")
             return
 
-        if not self._update_lpuser_config():
-            return
-
-        # Install sqlite3 if this is the primary node
-        if self._is_primary:
-            self.unit.status = ops.MaintenanceStatus("Installing sqlite3")
-            if not pkgs.sqlite3_install():
-                self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
-                return
-
-        # Install git-ubuntu snap
-        if not self._update_git_ubuntu_snap():
-            return
-
-        # Initialize git-ubuntu instance manager
-        self._init_importer_node()
+        self.unit.status = ops.ActiveStatus("Install complete.")
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle updates to config items."""
-        # Update lpuser config and git-ubuntu snap
-        if not self._update_lpuser_config() or not self._update_git_ubuntu_snap():
+        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user.")
+        setup_git_ubuntu_user(self._system_username)
+
+        # Update user's git and lpuser config, and git-ubuntu snap
+        if (
+            not self._update_git_user_config()
+            or not self._update_lpuser_config()
+            or not self._update_git_ubuntu_snap()
+        ):
             return
 
-        # Install sqlite3 if this is now the primary node
-        if self._is_primary:
-            self.unit.status = ops.MaintenanceStatus("Installing sqlite3")
-            if not pkgs.sqlite3_install():
-                self.unit.status = ops.BlockedStatus("Failed to install sqlite3")
-                return
-
-        # Re-install git-ubuntu services as needed.
+        # Initialize or re-install git-ubuntu services as needed.
         self._refresh_importer_node()
 
 
