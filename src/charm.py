@@ -26,6 +26,12 @@ logger = logging.getLogger(__name__)
 
 VALID_LOG_LEVELS = ["info", "debug", "warning", "error", "critical"]
 
+# Constant configuration values
+GIT_UBUNTU_SYSTEM_USER_USERNAME = "git-ubuntu"
+GIT_UBUNTU_GIT_USER_NAME = "Ubuntu Git Importer"
+GIT_UBUNTU_GIT_EMAIL = "usd-importer-do-not-mail@canonical.com"
+GIT_UBUNTU_USER_HOME_DIR = "/var/local/git-ubuntu"
+
 
 class GitUbuntuCharm(ops.CharmBase):
     """Charm git-ubuntu for package importing."""
@@ -59,10 +65,6 @@ class GitUbuntuCharm(ops.CharmBase):
         return str(self.config.get("channel"))
 
     @property
-    def _data_directory(self) -> str:
-        return str(self.config.get("data_directory"))
-
-    @property
     def _lp_username(self) -> str:
         return str(self.config.get("lpuser"))
 
@@ -86,14 +88,6 @@ class GitUbuntuCharm(ops.CharmBase):
         return False
 
     @property
-    def _source_directory(self) -> str:
-        return str(self.config.get("source_directory"))
-
-    @property
-    def _system_username(self) -> str:
-        return str(self.config.get("system_user"))
-
-    @property
     def _num_workers(self) -> int:
         num_workers = self.config.get("workers")
         if isinstance(num_workers, int):
@@ -108,18 +102,18 @@ class GitUbuntuCharm(ops.CharmBase):
             self._git_ubuntu_importer_node = PrimaryImporterNode(
                 self._node_id,
                 self._num_workers,
-                self._system_username,
+                GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 self._is_publishing_active,
                 self._controller_port,
-                self._data_directory,
-                self._source_directory,
+                GIT_UBUNTU_USER_HOME_DIR,
+                GIT_UBUNTU_USER_HOME_DIR,
             )
             logger.info("Initialized importer node as primary.")
         else:
             self._git_ubuntu_importer_node = ImporterNode(
                 self._node_id,
                 self._num_workers,
-                self._system_username,
+                GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 self._is_publishing_active,
                 self._controller_port,
                 self._controller_ip,
@@ -161,12 +155,12 @@ class GitUbuntuCharm(ops.CharmBase):
                 False,
                 self._node_id,
                 self._num_workers,
-                self._system_username,
+                GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 self._is_publishing_active,
                 self._controller_port,
                 "127.0.0.1",
-                data_directory=self._data_directory,
-                source_directory=self._source_directory,
+                data_directory=GIT_UBUNTU_USER_HOME_DIR,
+                source_directory=GIT_UBUNTU_USER_HOME_DIR,
             ):
                 logger.debug("Failed to update primary importer node with new values.")
                 update_fail = True
@@ -184,7 +178,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 False,
                 self._node_id,
                 self._num_workers,
-                self._system_username,
+                GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 self._is_publishing_active,
                 self._controller_port,
                 self._controller_ip,
@@ -215,11 +209,12 @@ class GitUbuntuCharm(ops.CharmBase):
     def _update_git_user_config(self) -> bool:
         """Attempt to update git config with the default git-ubuntu user name and email."""
         self.unit.status = ops.MaintenanceStatus("Updating git config for git-ubuntu user.")
-        name = "Ubuntu Git Importer"
-        email = "usd-importer-do-not-mail@canonical.com"
+
         if not pkgs.git_update_user_name_config(
-            self._system_username, name
-        ) or not pkgs.git_update_user_email_config(self._system_username, email):
+            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_USER_NAME
+        ) or not pkgs.git_update_user_email_config(
+            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_EMAIL
+        ):
             self.unit.status = ops.BlockedStatus("Failed to set git user config.")
             return False
         return True
@@ -229,7 +224,7 @@ class GitUbuntuCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("Updating lpuser entry for git-ubuntu user.")
         lpuser = self._lp_username
         if lp.is_valid_lp_username(lpuser):
-            if not pkgs.git_update_lpuser_config(self._system_username, lpuser):
+            if not pkgs.git_update_lpuser_config(GIT_UBUNTU_SYSTEM_USER_USERNAME, lpuser):
                 self.unit.status = ops.BlockedStatus("Failed to update lpuser config.")
                 return False
         else:
@@ -270,13 +265,13 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Failed to install sqlite3.")
             return
 
+        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user.")
+        setup_git_ubuntu_user(GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR)
+
         self.unit.status = ops.ActiveStatus("Install complete.")
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
         """Handle updates to config items."""
-        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user.")
-        setup_git_ubuntu_user(self._system_username)
-
         # Update user's git and lpuser config, and git-ubuntu snap
         if (
             not self._update_git_user_config()
