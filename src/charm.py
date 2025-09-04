@@ -204,10 +204,11 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
-        if isinstance(self._git_ubuntu_importer_node, EmptyImporterNode):
-            self.unit.status = ops.BlockedStatus("Failed to start, services not yet installed.")
-        elif self._git_ubuntu_importer_node.start():
-            self.unit.status = ops.ActiveStatus()
+        if self._git_ubuntu_importer_node.start():
+            node_type_str = "primary" if self._is_primary else "secondary"
+            self.unit.status = ops.ActiveStatus(
+                f"Running git-ubuntu importer {node_type_str} node."
+            )
         else:
             self.unit.status = ops.BlockedStatus("Failed to start services.")
 
