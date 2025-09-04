@@ -2,7 +2,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Snap and Apt package configuration and management functions."""
+"""Snap and Apt package installation and update functions."""
 
 import logging
 

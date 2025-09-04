@@ -17,7 +17,7 @@ import logging
 import ops
 
 import launchpad as lp
-import package_configuration as pkgs
+import package_installation as pkgs
 from importer_node import EmptyImporterNode, ImporterNode, PrimaryImporterNode
 from user_management import setup_git_ubuntu_user
 

@@ -10,10 +10,10 @@ from unittest.mock import patch
 from charms.operator_libs_linux.v0 import apt
 from charms.operator_libs_linux.v2 import snap
 
-import package_configuration as pkgs
+import package_installation as pkgs
 
 
-@patch("package_configuration.run_command_as_user")
+@patch("package_installation.run_command_as_user")
 def test_git_update_user_name_config_success(mock_run_command_as_user):
     """Test successful git user name config update."""
     mock_run_command_as_user.return_value = True
@@ -24,7 +24,7 @@ def test_git_update_user_name_config_success(mock_run_command_as_user):
     )
 
 
-@patch("package_configuration.run_command_as_user")
+@patch("package_installation.run_command_as_user")
 def test_git_update_user_name_config_fail(mock_run_command_as_user):
     """Test failed git user name config update."""
     mock_run_command_as_user.return_value = False
@@ -35,7 +35,7 @@ def test_git_update_user_name_config_fail(mock_run_command_as_user):
     )
 
 
-@patch("package_configuration.run_command_as_user")
+@patch("package_installation.run_command_as_user")
 def test_git_update_user_email_config_success(mock_run_command_as_user):
     """Test successful git user email config update."""
     mock_run_command_as_user.return_value = True
@@ -46,7 +46,7 @@ def test_git_update_user_email_config_success(mock_run_command_as_user):
     )
 
 
-@patch("package_configuration.run_command_as_user")
+@patch("package_installation.run_command_as_user")
 def test_git_update_user_email_config_fail(mock_run_command_as_user):
     """Test failed git user email config update."""
     mock_run_command_as_user.return_value = False
@@ -57,7 +57,7 @@ def test_git_update_user_email_config_fail(mock_run_command_as_user):
     )
 
 
-@patch("package_configuration.run_command_as_user")
+@patch("package_installation.run_command_as_user")
 def test_lp_user_config_success(mock_run_command_as_user):
     """Test successful launchpad user config update."""
     mock_run_command_as_user.return_value = True
@@ -68,7 +68,7 @@ def test_lp_user_config_success(mock_run_command_as_user):
     )
 
 
-@patch("package_configuration.run_command_as_user")
+@patch("package_installation.run_command_as_user")
 def test_lp_user_config_fail(mock_run_command_as_user):
     """Test failed launchpad user config update."""
     mock_run_command_as_user.return_value = False
@@ -79,8 +79,8 @@ def test_lp_user_config_fail(mock_run_command_as_user):
     )
 
 
-@patch("package_configuration.apt.update")
-@patch("package_configuration.apt.add_package")
+@patch("package_installation.apt.update")
+@patch("package_installation.apt.add_package")
 def test_git_install_success(mock_add_package, mock_update):
     """Test successful git install."""
     assert pkgs.git_install()
@@ -89,8 +89,8 @@ def test_git_install_success(mock_add_package, mock_update):
     mock_add_package.assert_called_once_with("git")
 
 
-@patch("package_configuration.apt.update")
-@patch("package_configuration.apt.add_package")
+@patch("package_installation.apt.update")
+@patch("package_installation.apt.add_package")
 def test_git_install_fail(mock_add_package, mock_update):
     """Test failed git install."""
     mock_add_package.side_effect = apt.PackageError
@@ -101,8 +101,8 @@ def test_git_install_fail(mock_add_package, mock_update):
     mock_add_package.assert_called_once_with("git")
 
 
-@patch("package_configuration.apt.update")
-@patch("package_configuration.apt.add_package")
+@patch("package_installation.apt.update")
+@patch("package_installation.apt.add_package")
 def test_sqlite3_install_success(mock_add_package, mock_update):
     """Test successful git install."""
     assert pkgs.sqlite3_install()
@@ -111,8 +111,8 @@ def test_sqlite3_install_success(mock_add_package, mock_update):
     mock_add_package.assert_called_once_with("sqlite3")
 
 
-@patch("package_configuration.apt.update")
-@patch("package_configuration.apt.add_package")
+@patch("package_installation.apt.update")
+@patch("package_installation.apt.add_package")
 def test_sqlite3_install_fail(mock_add_package, mock_update):
     """Test failed git install."""
     mock_add_package.side_effect = apt.PackageError
@@ -123,7 +123,7 @@ def test_sqlite3_install_fail(mock_add_package, mock_update):
     mock_add_package.assert_called_once_with("sqlite3")
 
 
-@patch("package_configuration.snap.SnapCache")
+@patch("package_installation.snap.SnapCache")
 def test_git_ubuntu_snap_refresh_failure(mock_snap_cache):
     """Test refresh function when a SnapError occurs."""
     mock_snap_cache.side_effect = snap.SnapError
@@ -133,7 +133,7 @@ def test_git_ubuntu_snap_refresh_failure(mock_snap_cache):
     mock_snap_cache.assert_called_once()
 
 
-@patch("package_configuration.snap.SnapCache")
+@patch("package_installation.snap.SnapCache")
 def test_git_ubuntu_snap_refresh_success(mock_snap_cache):
     """Test refresh function successful."""
     assert pkgs.git_ubuntu_snap_refresh("stable")
