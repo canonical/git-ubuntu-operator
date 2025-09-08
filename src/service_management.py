@@ -5,10 +5,68 @@
 """Systemd service management functions."""
 
 import logging
+from os import link
 
+from charmlibs import pathops
 from charms.operator_libs_linux.v1 import systemd
 
 logger = logging.getLogger(__name__)
+
+
+def create_systemd_service_file(filename: str, local_folder: str, file_content: str) -> bool:
+    """Create a systemd service file in a local folder, linking to the service files directory.
+
+    Args:
+        filename: The name of the service file to create.
+        local_folder: The local folder to create the file in.
+        file_content: The content of the service file.
+
+    Returns:
+        True if the file was created, False otherwise.
+    """
+    file_created = False
+
+    try:
+        service_file = pathops.LocalPath(local_folder, filename)
+        service_file.write_text(file_content, encoding="utf-8", user="root", group="root")
+        logger.info("Created service file at %s.", service_file)
+        file_created = True
+    except (FileNotFoundError, NotADirectoryError) as e:
+        logger.error(
+            "Failed to create service file %s due to directory issues: %s", filename, str(e)
+        )
+    except LookupError as e:
+        logger.error(
+            "Failed to create service file %s due to issues with root user: %s", filename, str(e)
+        )
+    except PermissionError as e:
+        logger.error(
+            "Failed to create service file %s due to permission issues: %s", filename, str(e)
+        )
+
+    if not file_created:
+        return False
+
+    # Link to services directory
+    file_linked = False
+
+    try:
+        link(
+            pathops.LocalPath(local_folder, filename),
+            pathops.LocalPath("/etc/systemd/system", filename),
+        )
+        logger.info("Linked service file to /etc/systemd/system.")
+        file_linked = True
+    except FileExistsError:
+        logger.error("Service file %s link already exists", filename)
+    except PermissionError as e:
+        logger.error(
+            "Failed to create service file link %s due to permission issues: %s", filename, str(e)
+        )
+    except OSError as e:
+        logger.error("Failed to create service file link %s due to OS error: %s", filename, str(e))
+
+    return file_linked
 
 
 def start_service(service_name: str) -> bool:

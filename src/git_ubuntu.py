@@ -9,7 +9,12 @@ import logging
 
 from charmlibs import pathops
 
-from service_management import daemon_reload, start_service, stop_service
+from service_management import (
+    create_systemd_service_file,
+    daemon_reload,
+    start_service,
+    stop_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -99,35 +104,7 @@ def generate_systemd_service_string(
     return "\n".join(service_lines)
 
 
-def create_systemd_service_file(filename: str, file_content: str) -> bool:
-    """Create a systemd service file in the service files directory, belonging to root.
-
-    Args:
-        filename: The name of the service file to create.
-        file_content: The content of the service file.
-
-    Returns:
-        True if the file was created, False otherwise.
-    """
-    try:
-        service_file = pathops.LocalPath("/etc/systemd/system/", filename)
-        service_file.write_text(file_content, encoding="utf-8", user="root", group="root")
-    except (FileNotFoundError, NotADirectoryError) as e:
-        logger.error(
-            "Failed to create service file %s due to directory issues: %s", filename, str(e)
-        )
-        return False
-    except LookupError as e:
-        logger.error(
-            "Failed to create service file %s due to issues with root user: %s", filename, str(e)
-        )
-        return False
-    except PermissionError as e:
-        logger.error(
-            "Failed to create service file %s due to permission issues: %s", filename, str(e)
-        )
-        return False
-    return True
+# TODO: Extract setup functions, remove all else
 
 
 class GitUbuntu:
@@ -240,7 +217,8 @@ class GitUbuntuBroker(GitUbuntu):
             wanted_by="multi-user.target",
         )
 
-        if not create_systemd_service_file(filename, service_string):
+        # TODO get home folder dynamically
+        if not create_systemd_service_file(filename, "/home/git-ubuntu/services/", service_string):
             return False
 
         # Check if service already existed and daemon-reload if so.
@@ -305,7 +283,7 @@ class GitUbuntuPoller(GitUbuntu):
             wanted_by="multi-user.target",
         )
 
-        if not create_systemd_service_file(filename, service_string):
+        if not create_systemd_service_file(filename, "/home/git-ubuntu/services/", service_string):
             return False
 
         # Check if service already existed and daemon-reload if so.
@@ -372,7 +350,7 @@ class GitUbuntuWorker(GitUbuntu):
             wanted_by="multi-user.target",
         )
 
-        if not create_systemd_service_file(filename, service_string):
+        if not create_systemd_service_file(filename, "/home/git-ubuntu/services/", service_string):
             return False
 
         # Check if service already existed and daemon-reload if so.
