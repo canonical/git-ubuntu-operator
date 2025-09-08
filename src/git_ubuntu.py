@@ -251,7 +251,7 @@ def start_services(service_folder: str) -> bool:
                 if start_service(service_file.name):
                     logger.info("Started service %s", service_file.name)
                 else:
-                    logger.error("Failed to start service %s", service_file)
+                    logger.error("Failed to start service %s", service_file.name)
                     services_started = False
             else:
                 logger.debug("Skipping non-service file %s", service_file.name)
@@ -286,7 +286,7 @@ def stop_services(service_folder: str) -> bool:
                 if stop_service(service_file.name):
                     logger.info("Stopped service %s", service_file.name)
                 else:
-                    logger.error("Failed to stop service %s", service_file)
+                    logger.error("Failed to stop service %s", service_file.name)
                     services_stopped = False
             else:
                 logger.debug("Skipping non-service file %s", service_file.name)
