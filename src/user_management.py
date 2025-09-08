@@ -25,6 +25,7 @@ def _run_command_as_user(user: str, command: str) -> bool:
     """
     command_result = system(f'su - {user} -s /bin/bash -c "{command}"')
     if command_result != 0:
+        logger.error("Command %s exited with result %d.", command, command_result)
         return False
     return True
 
@@ -48,11 +49,10 @@ def _clone_git_ubuntu_source(cloning_user: str, parent_directory: str, source_ur
         return False
 
     clone_dir = pathops.LocalPath(directory_path, "live-allowlist-denylist-source")
-    logger.info("Cloning git-ubuntu source to %s", clone_dir)
-    result = _run_command_as_user(cloning_user, f"git clone {source_url} {clone_dir}")
 
-    if result != 0:
-        logger.error("Failed to clone git-ubuntu source, process exited with result %d.", result)
+    logger.info("Cloning git-ubuntu source to %s", clone_dir)
+    if not _run_command_as_user(cloning_user, f"git clone {source_url} {clone_dir}"):
+        logger.error("Failed to clone git-ubuntu source.")
         return False
 
     return True
