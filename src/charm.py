@@ -16,10 +16,10 @@ import logging
 
 import ops
 
+import importer_node as node
 import launchpad as lp
 import package_installation as pkgs
 import user_management as usr
-from importer_node import EmptyImporterNode, ImporterNode, PrimaryImporterNode
 
 # Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
@@ -47,8 +47,6 @@ class GitUbuntuCharm(ops.CharmBase):
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
-
-        self._git_ubuntu_importer_node: ImporterNode = EmptyImporterNode()
 
     @property
     def _controller_ip(self) -> str:
@@ -95,111 +93,45 @@ class GitUbuntuCharm(ops.CharmBase):
             return num_workers
         return 0
 
-    def _init_importer_node(self) -> None:
-        """Initialize the git-ubuntu instance manager and install services."""
-        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu services.")
+    def _refresh_importer_node(self) -> None:
+        """Remove old and install new git-ubuntu services."""
+        self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu services.")
+
+        if not node.reset(GIT_UBUNTU_USER_HOME_DIR):
+            self.unit.status = ops.BlockedStatus("Failed to remove old git-ubuntu services.")
+            return
 
         if self._is_primary:
-            self._git_ubuntu_importer_node = PrimaryImporterNode(
+            if not node.setup_primary_node(
+                GIT_UBUNTU_USER_HOME_DIR,
                 self._node_id,
                 self._num_workers,
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 self._is_publishing_active,
                 self._controller_port,
-                GIT_UBUNTU_USER_HOME_DIR,
-                GIT_UBUNTU_USER_HOME_DIR,
-            )
+            ):
+                self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
+                return
             logger.info("Initialized importer node as primary.")
         else:
-            self._git_ubuntu_importer_node = ImporterNode(
+            if not node.setup_secondary_node(
+                GIT_UBUNTU_USER_HOME_DIR,
                 self._node_id,
                 self._num_workers,
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 self._is_publishing_active,
                 self._controller_port,
                 self._controller_ip,
-            )
+            ):
+                self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
+                return
             logger.info("Initialized importer node as secondary.")
 
-        if self._git_ubuntu_importer_node.install():
-            self.unit.status = ops.ActiveStatus("Importer node install complete.")
-            logger.info("Importer node initialization complete.")
-        else:
-            self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
-
-    def _refresh_importer_node(self) -> None:
-        """Check existing importer node and re-initialize its services as needed."""
-        self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu service files.")
-
-        run_install = False
-        update_fail = False
-
-        # Initialize the instance manager if it has yet to be.
-        if isinstance(self._git_ubuntu_importer_node, EmptyImporterNode):
-            logger.info("Importer node not yet initialized, running initialization.")
-            run_install = True
-
-        # Update git-ubuntu instances.
-        elif self._is_primary:
-            # This node is becoming the primary node but is secondary.
-            if not isinstance(self._git_ubuntu_importer_node, PrimaryImporterNode):
-                if not self._git_ubuntu_importer_node.destroy():
-                    self.unit.status = ops.BlockedStatus("Failed to destroy existing services.")
-                    return
-                logger.info("Swapping importer node from secondary to primary.")
-                run_install = True
-
-            # Update primary node with new values.
-            elif isinstance(
-                self._git_ubuntu_importer_node, PrimaryImporterNode
-            ) and not self._git_ubuntu_importer_node.update(  # pylint: disable=unexpected-keyword-arg
-                False,
-                self._node_id,
-                self._num_workers,
-                GIT_UBUNTU_SYSTEM_USER_USERNAME,
-                self._is_publishing_active,
-                self._controller_port,
-                "127.0.0.1",
-                data_directory=GIT_UBUNTU_USER_HOME_DIR,
-                source_directory=GIT_UBUNTU_USER_HOME_DIR,
-            ):
-                logger.debug("Failed to update primary importer node with new values.")
-                update_fail = True
-        else:
-            # This node is becoming secondary but is the primary.
-            if isinstance(self._git_ubuntu_importer_node, PrimaryImporterNode):
-                if not self._git_ubuntu_importer_node.destroy():
-                    self.unit.status = ops.BlockedStatus("Failed to destroy existing services.")
-                    return
-                logger.info("Swapping importer node from primary to secondary.")
-                run_install = True
-
-            # Update primary node with new values.
-            elif not self._git_ubuntu_importer_node.update(
-                False,
-                self._node_id,
-                self._num_workers,
-                GIT_UBUNTU_SYSTEM_USER_USERNAME,
-                self._is_publishing_active,
-                self._controller_port,
-                self._controller_ip,
-            ):
-                logger.debug("Failed to update secondary importer node with new values.")
-                update_fail = True
-
-        if run_install:
-            # Initialize and install a new node.
-            self._init_importer_node()
-        elif update_fail:
-            # Show that service updates failed.
-            self.unit.status = ops.BlockedStatus("Failed to update services.")
-        else:
-            logger.info("Importer node refresh complete.")
-            self.unit.status = ops.ActiveStatus("Importer node refresh complete.")
+        self.unit.status = ops.ActiveStatus("Importer node install complete.")
 
     def _on_start(self, _: ops.StartEvent) -> None:
         """Handle start event."""
-        if self._git_ubuntu_importer_node.start():
+        if node.start(GIT_UBUNTU_USER_HOME_DIR):
             node_type_str = "primary" if self._is_primary else "secondary"
             self.unit.status = ops.ActiveStatus(
                 f"Running git-ubuntu importer {node_type_str} node."
