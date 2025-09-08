@@ -31,6 +31,7 @@ GIT_UBUNTU_SYSTEM_USER_USERNAME = "git-ubuntu"
 GIT_UBUNTU_GIT_USER_NAME = "Ubuntu Git Importer"
 GIT_UBUNTU_GIT_EMAIL = "usd-importer-do-not-mail@canonical.com"
 GIT_UBUNTU_USER_HOME_DIR = "/var/local/git-ubuntu"
+GIT_UBUNTU_SOURCE_URL = "https://git.launchpad.net/git-ubuntu"
 
 
 class GitUbuntuCharm(ops.CharmBase):
@@ -265,6 +266,15 @@ class GitUbuntuCharm(ops.CharmBase):
 
         self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user.")
         usr.setup_git_ubuntu_user(GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR)
+
+        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user files.")
+        if not usr.setup_git_ubuntu_user_files(
+            GIT_UBUNTU_SYSTEM_USER_USERNAME,
+            GIT_UBUNTU_USER_HOME_DIR,
+            GIT_UBUNTU_SOURCE_URL,
+        ):
+            self.unit.status = ops.BlockedStatus("Failed to set up git-ubuntu user files.")
+            return
 
         self.unit.status = ops.ActiveStatus("Install complete.")
 
