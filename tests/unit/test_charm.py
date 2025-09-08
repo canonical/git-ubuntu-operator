@@ -29,10 +29,17 @@ def base_state(ctx):
 @patch("charms.operator_libs_linux.v0.apt.update")
 @patch("charms.operator_libs_linux.v0.apt.add_package")
 @patch("charm.usr.setup_git_ubuntu_user")
+@patch("charm.usr.setup_git_ubuntu_user_files")
 def test_install_success(
-    mock_setup_git_ubuntu_user, mock_add_package, mock_apt_update, ctx, base_state
+    mock_setup_git_ubuntu_user_files,
+    mock_setup_git_ubuntu_user,
+    mock_add_package,
+    mock_apt_update,
+    ctx,
+    base_state,
 ):
     """Test successful installation with valid config."""
+    mock_setup_git_ubuntu_user_files.return_value = True
     out = ctx.run(ctx.on.install(), base_state)
 
     assert out.unit_status == ActiveStatus("Install complete.")
@@ -40,6 +47,9 @@ def test_install_success(
     mock_apt_update.assert_called()
     mock_add_package.assert_has_calls([call("git"), call("sqlite3")])
     mock_setup_git_ubuntu_user.assert_called_once_with("git-ubuntu", "/var/local/git-ubuntu")
+    mock_setup_git_ubuntu_user_files.assert_called_once_with(
+        "git-ubuntu", "/var/local/git-ubuntu", "https://git.launchpad.net/git-ubuntu"
+    )
 
 
 @patch("charms.operator_libs_linux.v0.apt.update")
