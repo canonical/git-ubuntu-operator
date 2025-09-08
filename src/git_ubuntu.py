@@ -104,7 +104,131 @@ def generate_systemd_service_string(
     return "\n".join(service_lines)
 
 
-# TODO: Extract setup functions, remove all else
+def setup_broker_service(
+    local_folder: str,
+    user: str,
+    group: str,
+    broker_port: int = 1692,
+) -> bool:
+    """Set up broker systemd service file.
+
+    Args:
+        local_folder: The local folder to store the service in.
+        user: The user to run the service as.
+        group: The permissions group to run the service as.
+        broker_port: The network port to provide tasks to workers on.
+
+    Returns:
+        True if setup succeeded, False otherwise.
+    """
+    filename = "git-ubuntu-importer-service-broker.service"
+    exec_start = f"/snap/bin/git-ubuntu importer-service-broker tcp://*:{broker_port}"
+
+    service_string = generate_systemd_service_string(
+        "git-ubuntu importer service broker",
+        user,
+        group,
+        "simple",
+        exec_start,
+        service_restart="always",
+        environment="PYTHONUNBUFFERED=1",
+        runtime_dir="git-ubuntu",
+        wanted_by="multi-user.target",
+    )
+
+    return create_systemd_service_file(filename, local_folder, service_string)
+
+
+def setup_poller_service(
+    local_folder: str,
+    user: str,
+    group: str,
+    denylist: pathops.LocalPath,
+    proxy: str = "",
+) -> bool:
+    """Set up poller systemd service file.
+
+    Args:
+        local_folder: The local folder to store the service in.
+        user: The user to run the service as.
+        group: The permissions group to run the service as.
+        denylist: The location of the package denylist.
+        proxy: Optional proxy url.
+
+    Returns:
+        True if setup succeeded, False otherwise.
+    """
+    filename = "git-ubuntu-importer-service-poller.service"
+    exec_start = f"/snap/bin/git-ubuntu importer-service-poller --denylist {denylist}"
+
+    environment = "PYTHONUNBUFFERED=1"
+
+    if proxy:
+        environment = f"http_proxy={proxy} " + environment
+
+    service_string = generate_systemd_service_string(
+        "git-ubuntu importer service poller",
+        user,
+        group,
+        "notify",
+        exec_start,
+        timeout_start_sec=1200,
+        service_restart="always",
+        restart_sec=60,
+        watchdog_sec=86400,
+        environment=environment,
+        wanted_by="multi-user.target",
+    )
+
+    return create_systemd_service_file(filename, local_folder, service_string)
+
+
+def setup_worker_service(
+    local_folder: str,
+    user: str,
+    group: str,
+    worker_name: str = "",
+    push_to_lp: bool = True,
+    broker_ip: str = "127.0.0.1",
+    broker_port: int = 1692,
+) -> bool:
+    """Set up worker systemd file with designated worker name.
+
+    Args:
+        local_folder: The local folder to store the service in.
+        user: The user to run the service as.
+        group: The permissions group to run the service as.
+        worker_name: The unique worker ID to add to the service filename.
+        push_to_lp: True if publishing repositories to Launchpad.
+        broker_ip: The IP address of the broker process' node.
+        broker_port: The network port that the broker provides tasks on.
+
+    Returns:
+        True if setup succeeded, False otherwise.
+    """
+    filename = f"git-ubuntu-importer-service-worker{worker_name}.service"
+
+    publish_arg = " --no-push" if not push_to_lp else ""
+    broker_url = f"tcp://{broker_ip}:{broker_port}"
+    exec_start = f"/snap/bin/git-ubuntu importer-service-worker{publish_arg} %i {broker_url}"
+
+    service_string = generate_systemd_service_string(
+        "git-ubuntu importer service worker",
+        user,
+        group,
+        "notify",
+        exec_start,
+        service_restart="always",
+        restart_sec=60,
+        watchdog_sec=259200,
+        timeout_abort_sec=600,
+        watchdog_signal="SIGINT",
+        private_tmp=True,
+        environment="PYTHONUNBUFFERED=1",
+        wanted_by="multi-user.target",
+    )
+
+    return create_systemd_service_file(filename, local_folder, service_string)
 
 
 class GitUbuntu:
