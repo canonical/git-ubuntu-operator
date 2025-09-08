@@ -269,6 +269,72 @@ def start_services(service_folder: str) -> bool:
     return services_started
 
 
+def stop_services(service_folder: str) -> bool:
+    """Stop all git-ubuntu services.
+
+    Args:
+        service_folder: The name of the folder containing the service files.
+
+    Returns:
+        True if all services were stopped successfully, False otherwise.
+    """
+    service_folder_path = pathops.LocalPath(service_folder)
+    services_stopped = True
+
+    try:
+        for service_file in service_folder_path.iterdir():
+            if service_file.suffix == ".service":
+                if stop_service(service_file.name):
+                    logger.info("Stopped service %s", service_file.name)
+                else:
+                    logger.error("Failed to stop service %s", service_file)
+                    services_stopped = False
+            else:
+                logger.debug("Skipping non-service file %s", service_file.name)
+    except NotADirectoryError:
+        logger.error("The provided location %s is not a directory.", service_folder)
+        services_stopped = False
+    except PermissionError as e:
+        logger.error("Failed to start services due to permission issues: %s", str(e))
+        services_stopped = False
+    except FileNotFoundError:
+        logger.error("Service folder not found.")
+        services_stopped = False
+
+    return services_stopped
+
+
+def destroy_services(service_folder: str) -> bool:
+    """Destroy all git-ubuntu service files.
+
+    Args:
+        service_folder: The name of the folder containing the service files.
+
+    Returns:
+        True if all services were deleted successfully, False otherwise.
+    """
+    service_folder_path = pathops.LocalPath(service_folder)
+    services_removed = False
+
+    try:
+        for service_file in service_folder_path.iterdir():
+            if service_file.suffix == ".service":
+                service_file.unlink(missing_ok=True)
+            else:
+                logger.debug("Skipping removal of non-service file %s", service_file.name)
+        services_removed = True
+    except NotADirectoryError:
+        logger.error("The provided location %s is not a directory.", service_folder)
+    except PermissionError as e:
+        logger.error("Failed to start services due to permission issues: %s", str(e))
+    except FileNotFoundError:
+        logger.error("Service folder not found.")
+    except (IOError, OSError) as e:
+        logger.error("Failed to remove a service file due to error: %s", str(e))
+
+    return services_removed
+
+
 class GitUbuntu:
     """Abstract git-ubuntu importer runner class."""
 
