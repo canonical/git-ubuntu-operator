@@ -143,7 +143,7 @@ def setup_poller_service(
     local_folder: str,
     user: str,
     group: str,
-    denylist: pathops.LocalPath,
+    denylist: str,
     proxy: str = "",
 ) -> bool:
     """Set up poller systemd service file.
@@ -229,6 +229,44 @@ def setup_worker_service(
     )
 
     return create_systemd_service_file(filename, local_folder, service_string)
+
+
+def start_services(service_folder: str) -> bool:
+    """Start all git-ubuntu services.
+
+    Args:
+        service_folder: The name of the folder containing the service files.
+
+    Returns:
+        True if all services were started successfully, False otherwise.
+    """
+    if not daemon_reload():
+        return False
+
+    service_folder_path = pathops.LocalPath(service_folder)
+    services_started = True
+
+    try:
+        for service_file in service_folder_path.iterdir():
+            if service_file.suffix == ".service":
+                if start_service(service_file.name):
+                    logger.info("Started service %s", service_file.name)
+                else:
+                    logger.error("Failed to start service %s", service_file)
+                    services_started = False
+            else:
+                logger.debug("Skipping non-service file %s", service_file.name)
+    except NotADirectoryError:
+        logger.error("The provided location %s is not a directory.", service_folder)
+        services_started = False
+    except PermissionError as e:
+        logger.error("Failed to start services due to permission issues: %s", str(e))
+        services_started = False
+    except FileNotFoundError:
+        logger.error("Service folder not found.")
+        services_started = False
+
+    return services_started
 
 
 class GitUbuntu:
