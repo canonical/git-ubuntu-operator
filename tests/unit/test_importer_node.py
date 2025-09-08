@@ -7,604 +7,147 @@
 
 from unittest.mock import patch
 
-from charmlibs import pathops
-from pytest import fixture
-
-from git_ubuntu import GitUbuntuBroker, GitUbuntuPoller
-from importer_node import EmptyImporterNode, ImporterNode, PrimaryImporterNode
+import importer_node
 
 
-@fixture
-def default_node():
-    """Create a node with default settings."""
-    return PrimaryImporterNode(0, 2, "ubuntu", True, 1692, "/var/local/git-ubuntu", "/home/ubuntu")
+@patch("importer_node.git_ubuntu.setup_worker_service")
+def test_setup_secondary_node_success(mock_setup_worker):
+    """Test successful secondary node setup."""
+    mock_setup_worker.return_value = True
+
+    result = importer_node.setup_secondary_node(
+        "/var/local/git-ubuntu", 1, 2, "git-ubuntu", True, 1692, "192.168.1.1"
+    )
+
+    assert result is True
+    assert mock_setup_worker.call_count == 2
 
 
-def test_init_creates_correct_instances(default_node):
-    """Test creation of broker, poller, and number of workers."""
-    assert isinstance(default_node._broker, GitUbuntuBroker)
-    assert isinstance(default_node._poller, GitUbuntuPoller)
-    assert len(default_node._workers) == 2
+@patch("importer_node.git_ubuntu.setup_worker_service")
+def test_setup_secondary_node_failure(mock_setup_worker):
+    """Test secondary node setup failure."""
+    mock_setup_worker.return_value = False
 
-    secondary_triple_node = ImporterNode(1, 3, "ubuntu", True, 1692, "192.168.1.2")
-    assert len(secondary_triple_node._workers) == 3
+    result = importer_node.setup_secondary_node(
+        "/var/local/git-ubuntu", 1, 1, "git-ubuntu", True, 1692, "192.168.1.1"
+    )
 
-
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.move")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_data_directory_update_same_success(
-    mock_mkdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
-):
-    """Test data_directory update attempt with same name."""
-    assert default_node._update_data_directory("/var/local/git-ubuntu")
-
-    mock_mkdir.assert_not_called()
-    mock_exists.assert_not_called()
-    mock_move.assert_not_called()
-    mock_stop.assert_not_called()
-    mock_destroy.assert_not_called()
+    assert result is False
 
 
-@patch("importer_node.GitUbuntuBroker.setup")
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.move")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_data_directory_update_exists_success(
-    mock_mkdir,
-    mock_exists,
-    mock_move,
-    mock_stop,
-    mock_destroy,
-    mock_poller_setup,
-    mock_broker_setup,
-    default_node,
-):
-    """Test data_directory update attempt when db already exists."""
-    mock_mkdir.side_effect = FileExistsError()
+@patch("importer_node.git_ubuntu.setup_poller_service")
+@patch("importer_node.git_ubuntu.setup_broker_service")
+@patch("importer_node.setup_secondary_node")
+def test_setup_primary_node_success(mock_secondary, mock_broker, mock_poller):
+    """Test successful primary node setup."""
+    mock_secondary.return_value = True
+    mock_broker.return_value = True
+    mock_poller.return_value = True
+
+    result = importer_node.setup_primary_node(
+        "/var/local/git-ubuntu", 1, 2, "git-ubuntu", True, 1692
+    )
+
+    assert result is True
+    mock_secondary.assert_called_once()
+    mock_broker.assert_called_once()
+    mock_poller.assert_called_once()
+
+
+@patch("importer_node.setup_secondary_node")
+def test_setup_primary_node_secondary_failure(mock_secondary):
+    """Test primary node setup with secondary failure."""
+    mock_secondary.return_value = False
+
+    result = importer_node.setup_primary_node(
+        "/var/local/git-ubuntu", 1, 2, "git-ubuntu", True, 1692
+    )
+
+    assert result is False
+
+
+@patch("importer_node.git_ubuntu.setup_broker_service")
+@patch("importer_node.setup_secondary_node")
+def test_setup_primary_node_broker_failure(mock_secondary, mock_broker):
+    """Test primary node setup with broker failure."""
+    mock_secondary.return_value = True
+    mock_broker.return_value = False
+
+    result = importer_node.setup_primary_node(
+        "/var/local/git-ubuntu", 1, 2, "git-ubuntu", True, 1692
+    )
+
+    assert result is False
+
+
+@patch("importer_node.git_ubuntu.setup_poller_service")
+@patch("importer_node.git_ubuntu.setup_broker_service")
+@patch("importer_node.setup_secondary_node")
+def test_setup_primary_node_poller_failure(mock_secondary, mock_broker, mock_poller):
+    """Test primary node setup with poller failure."""
+    mock_secondary.return_value = True
+    mock_broker.return_value = True
+    mock_poller.return_value = False
+
+    result = importer_node.setup_primary_node(
+        "/var/local/git-ubuntu", 1, 2, "git-ubuntu", True, 1692
+    )
+
+    assert result is False
+
+
+@patch("importer_node.git_ubuntu.start_services")
+def test_start_success(mock_start_services):
+    """Test successful service start."""
+    mock_start_services.return_value = True
+
+    result = importer_node.start("/var/local/git-ubuntu")
+
+    assert result is True
+    mock_start_services.assert_called_once_with("/var/local/git-ubuntu/services")
+
+
+@patch("importer_node.git_ubuntu.start_services")
+def test_start_failure(mock_start_services):
+    """Test service start failure."""
+    mock_start_services.return_value = False
+
+    result = importer_node.start("/var/local/git-ubuntu")
+
+    assert result is False
+
+
+@patch("importer_node.git_ubuntu.destroy_services")
+@patch("importer_node.git_ubuntu.stop_services")
+def test_reset_success(mock_stop, mock_destroy):
+    """Test successful service reset."""
     mock_stop.return_value = True
-    mock_exists.return_value = True
     mock_destroy.return_value = True
-    mock_poller_setup.return_value = True
-    mock_broker_setup.return_value = True
 
-    assert default_node._update_data_directory("/var/new/git-ubuntu")
+    result = importer_node.reset("/var/local/git-ubuntu")
 
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_called_once()
-    mock_move.assert_not_called()
-    mock_stop.assert_called_once_with(stop_workers=False)
-    mock_destroy.assert_called_once_with(destroy_workers=False)
-    mock_poller_setup.assert_called_once()
-    mock_broker_setup.assert_called_once()
+    assert result is True
+    mock_stop.assert_called_once_with("/var/local/git-ubuntu/services")
+    mock_destroy.assert_called_once_with("/var/local/git-ubuntu/services")
 
 
-@patch("importer_node.GitUbuntuBroker.setup")
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.move")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_data_directory_update_folder_exists_success(
-    mock_mkdir,
-    mock_exists,
-    mock_move,
-    mock_stop,
-    mock_destroy,
-    mock_poller_setup,
-    mock_broker_setup,
-    default_node,
-):
-    """Test data_directory update attempt when new folder already exists."""
-    mock_mkdir.side_effect = FileExistsError()
-    mock_stop.return_value = True
-    mock_exists.return_value = False
-    mock_destroy.return_value = True
-    mock_poller_setup.return_value = True
-    mock_broker_setup.return_value = True
-
-    assert default_node._update_data_directory("/var/new/git-ubuntu")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_called()
-    mock_move.assert_not_called()
-    mock_stop.assert_called_once_with(stop_workers=False)
-    mock_destroy.assert_called_once_with(destroy_workers=False)
-    mock_poller_setup.assert_called_once()
-    mock_broker_setup.assert_called_once()
-
-
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.move")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_data_directory_update_mkdir_file_fail(
-    mock_mkdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
-):
-    """Test data_directory update attempt with new directory being an existing file."""
-    mock_mkdir.side_effect = NotADirectoryError()
-
-    assert not default_node._update_data_directory("/var/new/git-ubuntu")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_not_called()
-    mock_move.assert_not_called()
-    mock_stop.assert_not_called()
-    mock_destroy.assert_not_called()
-
-
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.move")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_data_directory_update_permission_fail(
-    mock_mkdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
-):
-    """Test data_directory update attempt with a permission error on mkdir."""
-    mock_mkdir.side_effect = PermissionError()
-
-    assert not default_node._update_data_directory("/var/new/git-ubuntu")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_not_called()
-    mock_move.assert_not_called()
-    mock_stop.assert_not_called()
-    mock_destroy.assert_not_called()
-
-
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.move")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_data_directory_update_user_lookup_fail(
-    mock_mkdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
-):
-    """Test data_directory update attempt with a user/group check error."""
-    mock_mkdir.side_effect = LookupError()
-
-    assert not default_node._update_data_directory("/var/new/git-ubuntu")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_not_called()
-    mock_move.assert_not_called()
-    mock_stop.assert_not_called()
-    mock_destroy.assert_not_called()
-
-
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.move")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_data_directory_stop_fail(
-    mock_mkdir, mock_exists, mock_move, mock_stop, mock_destroy, default_node
-):
-    """Test data_directory update attempt when git-ubuntu fails to stop."""
+@patch("importer_node.git_ubuntu.stop_services")
+def test_reset_stop_failure(mock_stop):
+    """Test reset with stop failure."""
     mock_stop.return_value = False
 
-    assert not default_node._update_data_directory("/var/new/git-ubuntu")
+    result = importer_node.reset("/var/local/git-ubuntu")
 
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_not_called()
-    mock_move.assert_not_called()
-    mock_stop.assert_called_once_with(stop_workers=False)
-    mock_destroy.assert_not_called()
+    assert result is False
 
 
-@patch("importer_node.GitUbuntuBroker.setup")
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.move")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_data_directory_destroy_fail(
-    mock_mkdir,
-    mock_exists,
-    mock_move,
-    mock_stop,
-    mock_destroy,
-    mock_poller_setup,
-    mock_broker_setup,
-    default_node,
-):
-    """Test data_directory update attempt when service destroy fails."""
+@patch("importer_node.git_ubuntu.destroy_services")
+@patch("importer_node.git_ubuntu.stop_services")
+def test_reset_destroy_failure(mock_stop, mock_destroy):
+    """Test reset with destroy failure."""
     mock_stop.return_value = True
-    mock_exists.return_value = True
     mock_destroy.return_value = False
 
-    assert not default_node._update_data_directory("/var/new/git-ubuntu")
+    result = importer_node.reset("/var/local/git-ubuntu")
 
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_called_once()
-    mock_move.assert_not_called()
-    mock_stop.assert_called_once_with(stop_workers=False)
-    mock_destroy.assert_called_once_with(destroy_workers=False)
-    mock_poller_setup.assert_not_called()
-    mock_broker_setup.assert_not_called()
-
-
-@patch("importer_node.GitUbuntuBroker.setup")
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.move")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_data_directory_poller_fail(
-    mock_mkdir,
-    mock_exists,
-    mock_move,
-    mock_stop,
-    mock_destroy,
-    mock_poller_setup,
-    mock_broker_setup,
-    default_node,
-):
-    """Test data_directory update attempt when poller setup fails."""
-    mock_stop.return_value = True
-    mock_exists.return_value = True
-    mock_destroy.return_value = True
-    mock_poller_setup.return_value = False
-    mock_broker_setup.return_value = True
-
-    assert not default_node._update_data_directory("/var/new/git-ubuntu")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_called_once()
-    mock_move.assert_not_called()
-    mock_stop.assert_called_once_with(stop_workers=False)
-    mock_destroy.assert_called_once_with(destroy_workers=False)
-    mock_poller_setup.assert_called_once()
-    mock_broker_setup.assert_called_once()
-
-
-@patch("importer_node.GitUbuntuBroker.setup")
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.move")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_data_directory_broker_fail(
-    mock_mkdir,
-    mock_exists,
-    mock_move,
-    mock_stop,
-    mock_destroy,
-    mock_poller_setup,
-    mock_broker_setup,
-    default_node,
-):
-    """Test data_directory update attempt when broker setup fails."""
-    mock_stop.return_value = True
-    mock_exists.return_value = True
-    mock_destroy.return_value = True
-    mock_poller_setup.return_value = True
-    mock_broker_setup.return_value = False
-
-    assert not default_node._update_data_directory("/var/new/git-ubuntu")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_called_once()
-    mock_move.assert_not_called()
-    mock_stop.assert_called_once_with(stop_workers=False)
-    mock_destroy.assert_called_once_with(destroy_workers=False)
-    mock_poller_setup.assert_not_called()
-    mock_broker_setup.assert_called_once()
-
-
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.rmtree")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_source_directory_update_same_success(
-    mock_mkdir,
-    mock_exists,
-    mock_rmtree,
-    mock_stop,
-    mock_destroy,
-    mock_poller_setup,
-    default_node,
-):
-    """Test source_directory update attempt with same name."""
-    assert default_node._update_source_directory("/home/ubuntu")
-
-    mock_mkdir.assert_not_called()
-    mock_exists.assert_not_called()
-    mock_rmtree.assert_not_called()
-    mock_stop.assert_not_called()
-    mock_destroy.assert_not_called()
-    mock_poller_setup.assert_not_called()
-
-
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.rmtree")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_source_directory_update_source_exists_success(
-    mock_mkdir,
-    mock_exists,
-    mock_rmtree,
-    mock_stop,
-    mock_destroy,
-    mock_clone,
-    mock_poller_setup,
-    default_node,
-):
-    """Test source_directory update attempt when source already exists."""
-    mock_mkdir.side_effect = FileExistsError()
-    mock_stop.return_value = True
-    mock_exists.return_value = True
-    mock_destroy.return_value = True
-    mock_poller_setup.return_value = True
-
-    assert default_node._update_source_directory("/home/user2")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_called_once()
-    mock_rmtree.assert_called_once_with(
-        pathops.LocalPath("/home/user2/live-allowlist-denylist-source")
-    )
-    mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
-    mock_destroy.assert_called_once_with(destroy_broker=False, destroy_workers=False)
-    mock_poller_setup.assert_called_once()
-
-
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.rmtree")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_source_directory_update_directory_exists_success(
-    mock_mkdir,
-    mock_exists,
-    mock_rmtree,
-    mock_stop,
-    mock_destroy,
-    mock_clone,
-    mock_poller_setup,
-    default_node,
-):
-    """Test source_directory update attempt when the new directory already exists."""
-    mock_mkdir.side_effect = FileExistsError()
-    mock_stop.return_value = True
-    mock_exists.return_value = False
-    mock_clone.return_value = True
-    mock_destroy.return_value = True
-    mock_poller_setup.return_value = True
-
-    assert default_node._update_source_directory("/home/user2")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_called_once()
-    mock_rmtree.assert_not_called()
-    mock_clone.assert_called_once()
-    mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
-    mock_destroy.assert_called_once_with(destroy_broker=False, destroy_workers=False)
-    mock_poller_setup.assert_called_once()
-
-
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.rmtree")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_source_directory_update_file_exists_fail(
-    mock_mkdir,
-    mock_exists,
-    mock_rmtree,
-    mock_stop,
-    mock_destroy,
-    mock_clone,
-    mock_poller_setup,
-    default_node,
-):
-    """Test source_directory update attempt when the new directory already exists as file."""
-    mock_mkdir.side_effect = NotADirectoryError()
-
-    assert not default_node._update_source_directory("/home/user2")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_not_called()
-    mock_rmtree.assert_not_called()
-    mock_clone.assert_not_called()
-    mock_stop.assert_not_called()
-    mock_destroy.assert_not_called()
-    mock_poller_setup.assert_not_called()
-
-
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.rmtree")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_source_directory_update_permission_fail(
-    mock_mkdir,
-    mock_exists,
-    mock_rmtree,
-    mock_stop,
-    mock_destroy,
-    mock_clone,
-    mock_poller_setup,
-    default_node,
-):
-    """Test source_directory update attempt with permission error."""
-    mock_mkdir.side_effect = PermissionError()
-
-    assert not default_node._update_source_directory("/home/user2")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_not_called()
-    mock_rmtree.assert_not_called()
-    mock_clone.assert_not_called()
-    mock_stop.assert_not_called()
-    mock_destroy.assert_not_called()
-    mock_poller_setup.assert_not_called()
-
-
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.rmtree")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_source_directory_update_user_lookup_fail(
-    mock_mkdir,
-    mock_exists,
-    mock_rmtree,
-    mock_stop,
-    mock_destroy,
-    mock_clone,
-    mock_poller_setup,
-    default_node,
-):
-    """Test source_directory update attempt with a user/group lookup error."""
-    mock_mkdir.side_effect = LookupError()
-
-    assert not default_node._update_source_directory("/home/user2")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_not_called()
-    mock_rmtree.assert_not_called()
-    mock_clone.assert_not_called()
-    mock_stop.assert_not_called()
-    mock_destroy.assert_not_called()
-    mock_poller_setup.assert_not_called()
-
-
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.rmtree")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_source_directory_update_stop_fail(
-    mock_mkdir,
-    mock_exists,
-    mock_rmtree,
-    mock_stop,
-    mock_destroy,
-    mock_clone,
-    mock_poller_setup,
-    default_node,
-):
-    """Test source_directory update attempt when git-ubuntu stop fails."""
-    mock_stop.return_value = False
-
-    assert not default_node._update_source_directory("/home/user2")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_not_called()
-    mock_rmtree.assert_not_called()
-    mock_clone.assert_not_called()
-    mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
-    mock_destroy.assert_not_called()
-    mock_poller_setup.assert_not_called()
-
-
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.rmtree")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_source_directory_update_rmtree_fail(
-    mock_mkdir,
-    mock_exists,
-    mock_rmtree,
-    mock_stop,
-    mock_destroy,
-    mock_clone,
-    mock_poller_setup,
-    default_node,
-):
-    """Test source_directory update attempt when rmtree fails."""
-    mock_mkdir.side_effect = FileExistsError()
-    mock_stop.return_value = True
-    mock_exists.return_value = True
-    mock_rmtree.side_effect = OSError()
-
-    assert not default_node._update_source_directory("/home/user2")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_called_once()
-    mock_rmtree.assert_called_once()
-    mock_clone.assert_not_called()
-    mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
-    mock_destroy.assert_not_called()
-    mock_poller_setup.assert_not_called()
-
-
-@patch("importer_node.GitUbuntuPoller.setup")
-@patch("importer_node.PrimaryImporterNode._clone_git_ubuntu_source")
-@patch("importer_node.PrimaryImporterNode.destroy")
-@patch("importer_node.PrimaryImporterNode.stop")
-@patch("importer_node.rmtree")
-@patch("importer_node.pathops.LocalPath.exists")
-@patch("importer_node.pathops.LocalPath.mkdir")
-def test_source_directory_update_clone_fail(
-    mock_mkdir,
-    mock_exists,
-    mock_rmtree,
-    mock_stop,
-    mock_destroy,
-    mock_clone,
-    mock_poller_setup,
-    default_node,
-):
-    """Test source_directory update attempt when git-ubuntu source clone fails."""
-    mock_stop.return_value = True
-    mock_exists.return_value = False
-    mock_clone.return_value = False
-
-    assert not default_node._update_source_directory("/home/user2")
-
-    mock_mkdir.assert_called_once()
-    mock_exists.assert_called_once()
-    mock_rmtree.assert_not_called()
-    mock_clone.assert_called_once_with(pathops.LocalPath("/home/user2"))
-    mock_stop.assert_called_once_with(stop_broker=False, stop_workers=False)
-    mock_destroy.assert_not_called()
-    mock_poller_setup.assert_not_called()
-
-
-def test_inheritance():
-    """Test node class inheritance by checking instances."""
-    empty_node = EmptyImporterNode()
-    assert isinstance(empty_node, EmptyImporterNode)
-    assert isinstance(empty_node, ImporterNode)
-    assert not isinstance(empty_node, PrimaryImporterNode)
-
-    primary_node = PrimaryImporterNode(0, 0, "", False, 0, "", "")
-    assert isinstance(primary_node, ImporterNode)
-    assert isinstance(primary_node, PrimaryImporterNode)
-    assert not isinstance(primary_node, EmptyImporterNode)
-
-    secondary_node = ImporterNode(0, 0, "", False, 0, "")
-    assert isinstance(secondary_node, ImporterNode)
-    assert not isinstance(secondary_node, PrimaryImporterNode)
-    assert not isinstance(secondary_node, EmptyImporterNode)
+    assert result is False
