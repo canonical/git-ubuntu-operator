@@ -58,6 +58,67 @@ def _clone_git_ubuntu_source(cloning_user: str, parent_directory: str, source_ur
     return True
 
 
+def _write_python_keyring_config_file(user: str, home_dir: str) -> bool:
+    """Create a python_keyring/keyringrc.cfg file that enforces plaintext keyring usage.
+
+    Args:
+        user: The git-ubuntu user.
+        home_dir: The home directory for the user.
+
+    Returns:
+        True if directory and file creation succeeded, False otherwise.
+    """
+    python_keyring_config = pathops.LocalPath(home_dir, ".config/python_keyring/keyringrc.cfg")
+
+    parent_dir = python_keyring_config.parent
+    config_dir_success = False
+
+    try:
+        parent_dir.mkdir(parents=True, user=user, group=user)
+        config_dir_success = True
+    except FileExistsError:
+        logger.info("User config directory %s already exists.", parent_dir.as_posix())
+        config_dir_success = True
+    except NotADirectoryError:
+        logger.error(
+            "User config directory location %s already exists as a file.", parent_dir.as_posix()
+        )
+    except PermissionError:
+        logger.error(
+            "Unable to create new user config directory %s: permission denied.",
+            parent_dir.as_posix(),
+        )
+    except LookupError:
+        logger.error(
+            "Unable to create config directory %s: unknown user/group %s",
+            parent_dir.as_posix(),
+            user,
+        )
+
+    if not config_dir_success:
+        return False
+
+    keyring_config_success = False
+
+    try:
+        python_keyring_config.write_text(
+            "[backend]\n"
+            + "default-keyring=keyrings.alt.file.PlaintextKeyring\n"
+            + "keyring-path=/home/ubuntu/.cache/keyring\n",
+            user=user,
+            group=user,
+        )
+        keyring_config_success = True
+    except (FileNotFoundError, NotADirectoryError) as e:
+        logger.error("Failed to create keyringrc.cfg due to directory issues: %s", str(e))
+    except LookupError as e:
+        logger.error("Failed to create keyringrc.cfg due to issues with root user: %s", str(e))
+    except PermissionError as e:
+        logger.error("Failed to create keyringrc.cfg due to permission issues: %s", str(e))
+
+    return keyring_config_success
+
+
 def setup_git_ubuntu_user(user: str, home_dir: str) -> None:
     """Create the user for running git and git-ubuntu.
 
@@ -75,6 +136,7 @@ def setup_git_ubuntu_user_files(user: str, home_dir: str, git_ubuntu_source_url:
     Files include:
         The services folder
         git-ubuntu source code
+        python_keyring config
 
     Args:
         user: The user to install the files for.
@@ -109,7 +171,10 @@ def setup_git_ubuntu_user_files(user: str, home_dir: str, git_ubuntu_source_url:
             user,
         )
 
-    return services_dir_success
+    if not services_dir_success:
+        return False
+
+    return _write_python_keyring_config_file(user, home_dir)
 
 
 def update_git_user_name(user: str, name: str) -> bool:
