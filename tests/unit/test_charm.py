@@ -30,7 +30,9 @@ def base_state(ctx):
 @patch("charms.operator_libs_linux.v0.apt.add_package")
 @patch("charm.usr.setup_git_ubuntu_user")
 @patch("charm.usr.setup_git_ubuntu_user_files")
+@patch("charm.usr.set_snap_homedirs")
 def test_install_success(
+    mock_set_snap_homedirs,
     mock_setup_git_ubuntu_user_files,
     mock_setup_git_ubuntu_user,
     mock_add_package,
@@ -50,6 +52,7 @@ def test_install_success(
     mock_setup_git_ubuntu_user_files.assert_called_once_with(
         "git-ubuntu", "/var/local/git-ubuntu", "https://git.launchpad.net/git-ubuntu"
     )
+    mock_set_snap_homedirs.assert_called_once_with("/var/local/git-ubuntu")
 
 
 @patch("charms.operator_libs_linux.v0.apt.update")

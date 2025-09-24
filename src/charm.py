@@ -208,6 +208,12 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Failed to set up git-ubuntu user files.")
             return
 
+        if not usr.set_snap_homedirs(GIT_UBUNTU_USER_HOME_DIR):
+            self.unit.status = ops.BlockedStatus(
+                "Failed to allow snap to use homedirs outside /home."
+            )
+            return
+
         self.unit.status = ops.ActiveStatus("Install complete.")
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
