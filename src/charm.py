@@ -13,6 +13,7 @@ https://juju.is/docs/sdk/create-a-minimal-kubernetes-charm
 """
 
 import logging
+from pathlib import Path
 
 import ops
 
@@ -32,6 +33,7 @@ GIT_UBUNTU_GIT_USER_NAME = "Ubuntu Git Importer"
 GIT_UBUNTU_GIT_EMAIL = "usd-importer-do-not-mail@canonical.com"
 GIT_UBUNTU_USER_HOME_DIR = "/var/local/git-ubuntu"
 GIT_UBUNTU_SOURCE_URL = "https://git.launchpad.net/git-ubuntu"
+GIT_UBUNTU_KEYRING_FOLDER = Path(__file__).parent.parent / "keyring"
 
 
 class GitUbuntuCharm(ops.CharmBase):
@@ -211,6 +213,12 @@ class GitUbuntuCharm(ops.CharmBase):
         if not usr.set_snap_homedirs(GIT_UBUNTU_USER_HOME_DIR):
             self.unit.status = ops.BlockedStatus(
                 "Failed to allow snap to use homedirs outside /home."
+            )
+            return
+
+        if not pkgs.git_ubuntu_add_debian_archive_keyring(GIT_UBUNTU_KEYRING_FOLDER):
+            self.unit.status = ops.BlockedStatus(
+                "Failed to copy debian archive keyring to /etc/git-ubuntu."
             )
             return
 

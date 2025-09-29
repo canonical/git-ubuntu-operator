@@ -19,6 +19,20 @@ parts:
     plugin: charm
     source: .
 
+  debian-archive-keyring:
+    plugin: dump
+    source: keyring
+    organize:
+      debian-archive-keyring.gpg: keyring/debian-archive-keyring.gpg
+
+  files:
+    plugin: dump
+    source: .
+    stage:
+      - LICENSE
+      - README.md
+      - icon.svg
+
 charm-libs:
   - lib: operator-libs-linux.apt
     version: "0"
