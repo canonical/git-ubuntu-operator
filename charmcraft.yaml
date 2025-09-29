@@ -19,6 +19,14 @@ parts:
     plugin: charm
     source: .
 
+  files:
+    plugin: dump
+    source: .
+    stage:
+      - LICENSE
+      - README.md
+      - icon.svg
+
 charm-libs:
   - lib: operator-libs-linux.apt
     version: "0"
