@@ -103,3 +103,16 @@ def test_installed_apps(app: str, juju: jubilant.Juju):
     git_ubuntu_status = juju.ssh(f"{app}/0", "snap list | grep git-ubuntu", "")
     assert "latest/beta" in git_ubuntu_status
     assert "classic" in git_ubuntu_status
+
+
+def test_installed_dump_files(app: str, juju: jubilant.Juju):
+    """Test that all required dump files are installed.
+
+    Args:
+        app: The app in charge of this unit.
+        juju: The juju model in charge of the app.
+    """
+    debian_keyring_status = juju.ssh(
+        f"{app}/0", "test -f /etc/git-ubuntu/debian-archive-keyring.gpg | echo $?", ""
+    ).strip()
+    assert debian_keyring_status == "0"
