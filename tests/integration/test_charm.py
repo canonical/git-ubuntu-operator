@@ -5,20 +5,101 @@
 
 """Integration tests."""
 
+import json
 import logging
-from pathlib import Path
 
 import jubilant
-import yaml
 
 logger = logging.getLogger(__name__)
 
-METADATA = yaml.safe_load(Path("./charmcraft.yaml").read_text())
-APP_NAME = METADATA["name"]
+
+def test_service_status(app: str, juju: jubilant.Juju):
+    """Test necessary files exist after startup.
+
+    Args:
+        app: The app in charge of this unit.
+        juju: The juju model in charge of the app.
+    """
+    juju.wait(jubilant.all_active)
+
+    def get_services_dict(app: str, juju: jubilant.Juju) -> dict[str, dict[str, bool | str]]:
+        """Get a dictionary of running systemd services on the app's unit 0.
+
+        Args:
+            app: The app in charge of this unit.
+            juju: The juju model in charge of the app.
+
+        Returns:
+            A dict mapping unit name to if the service is active and its description.
+        """
+        service_output = juju.ssh(
+            f"{app}/0",
+            "systemctl list-units --type service --full --all --output json --no-pager | cat -v",
+            "",
+        )
+        service_json = json.loads(service_output)
+        service_dict = dict()
+
+        for service_entry in service_json:
+            service_dict[service_entry["unit"]] = {
+                "active": service_entry["active"] == "active",
+                "description": service_entry["description"],
+            }
+
+        return service_dict
+
+    services = get_services_dict(app, juju)
+
+    assert services["git-ubuntu-importer-service-broker.service"]["active"]
+    assert (
+        services["git-ubuntu-importer-service-broker.service"]["description"]
+        == "git-ubuntu importer service broker"
+    )
+    assert services["git-ubuntu-importer-service-poller.service"]["active"]
+    assert (
+        services["git-ubuntu-importer-service-poller.service"]["description"]
+        == "git-ubuntu importer service poller"
+    )
+    assert services["git-ubuntu-importer-service-worker0_0.service"]["active"]
+    assert (
+        services["git-ubuntu-importer-service-worker0_0.service"]["description"]
+        == "git-ubuntu importer service worker"
+    )
+    assert services["git-ubuntu-importer-service-worker0_1.service"]["active"]
+    assert (
+        services["git-ubuntu-importer-service-worker0_1.service"]["description"]
+        == "git-ubuntu importer service worker"
+    )
 
 
-def test_startup(charm: Path, juju: jubilant.Juju):
-    """Test default startup without LP integration."""
-    juju.deploy(f"./{charm}", config={"publish": False})
+def test_installed_apps(app: str, juju: jubilant.Juju):
+    """Test that all required applications are installed.
 
-    juju.wait(lambda status: jubilant.all_active(status, APP_NAME))
+    Args:
+        app: The app in charge of this unit.
+        juju: The juju model in charge of the app.
+    """
+    juju.wait(jubilant.all_active)
+
+    def check_deb_installed(app: str, juju: jubilant.Juju, package_name: str) -> bool:
+        """Check if a deb pkg is installed on the app's unit 0.
+
+        Args:
+            app: The app in charge of this unit.
+            juju: The juju model in charge of the app.
+            package_name: The name of the deb package.
+
+        Returns:
+            True if the package is installed, False otherwise.
+        """
+        install_status = juju.ssh(
+            f"{app}/0", f"dpkg-query --show --showformat='${{Status}}' {package_name}"
+        )
+        return "installed" in install_status
+
+    assert check_deb_installed(app, juju, "git")
+    assert check_deb_installed(app, juju, "sqlite3")
+
+    git_ubuntu_status = juju.ssh(f"{app}/0", "snap list | grep git-ubuntu", "")
+    assert "latest/beta" in git_ubuntu_status
+    assert "classic" in git_ubuntu_status
