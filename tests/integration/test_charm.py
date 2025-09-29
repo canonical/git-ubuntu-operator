@@ -81,6 +81,25 @@ def test_installed_apps(app: str, juju: jubilant.Juju):
     """
     juju.wait(jubilant.all_active)
 
+    def check_deb_installed(app: str, juju: jubilant.Juju, package_name: str) -> bool:
+        """Check if a deb pkg is installed on the app's unit 0.
+
+        Args:
+            app: The app in charge of this unit.
+            juju: The juju model in charge of the app.
+            package_name: The name of the deb package.
+
+        Returns:
+            True if the package is installed, False otherwise.
+        """
+        install_status = juju.ssh(
+            f"{app}/0", f"dpkg-query --show --showformat='${{Status}}' {package_name}"
+        )
+        return "installed" in install_status
+
+    assert check_deb_installed(app, juju, "git")
+    assert check_deb_installed(app, juju, "sqlite3")
+
     git_ubuntu_status = juju.ssh(f"{app}/0", "snap list | grep git-ubuntu", "")
     assert "latest/beta" in git_ubuntu_status
     assert "classic" in git_ubuntu_status
