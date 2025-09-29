@@ -104,7 +104,7 @@ def _write_python_keyring_config_file(user: str, home_dir: str) -> bool:
         python_keyring_config.write_text(
             "[backend]\n"
             + "default-keyring=keyrings.alt.file.PlaintextKeyring\n"
-            + "keyring-path=/home/ubuntu/.cache/keyring\n",
+            + f"keyring-path={home_dir}/.cache/keyring\n",
             user=user,
             group=user,
         )
