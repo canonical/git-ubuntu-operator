@@ -7,7 +7,7 @@
 
 from unittest.mock import call, patch
 
-from charms.operator_libs_linux.v0.apt import PackageError
+from charmlibs.apt import PackageError
 from ops.testing import ActiveStatus, BlockedStatus, Context, State
 from pytest import fixture
 
@@ -26,8 +26,8 @@ def base_state(ctx):
     return State(leader=True)
 
 
-@patch("charms.operator_libs_linux.v0.apt.update")
-@patch("charms.operator_libs_linux.v0.apt.add_package")
+@patch("charmlibs.apt.update")
+@patch("charmlibs.apt.add_package")
 @patch("charm.usr.setup_git_ubuntu_user")
 @patch("charm.usr.setup_git_ubuntu_user_files")
 @patch("charm.usr.set_snap_homedirs")
@@ -58,8 +58,8 @@ def test_install_success(
     mock_git_ubuntu_add_debian_archive_keyring.assert_called_once()
 
 
-@patch("charms.operator_libs_linux.v0.apt.update")
-@patch("charms.operator_libs_linux.v0.apt.add_package")
+@patch("charmlibs.apt.update")
+@patch("charmlibs.apt.add_package")
 def test_install_apt_error(
     mock_add_package,
     mock_update,
