@@ -19,6 +19,41 @@ from service_management import (
 logger = logging.getLogger(__name__)
 
 
+def _get_services_list(service_folder: str) -> list[str] | None:
+    """Get the list of services from the git-ubuntu service folder.
+
+    Args:
+        service_folder: The name of the folder containing the service files.
+
+    Returns:
+        A list of service names or None if checking the folder failed.
+    """
+    service_folder_path = pathops.LocalPath(service_folder)
+    collected_services = True
+    service_list = []
+
+    try:
+        for service_file in service_folder_path.iterdir():
+            if service_file.suffix == ".service":
+                service_list.append(service_file.name)
+            else:
+                logger.debug("Skipping non-service file %s", service_file.name)
+    except NotADirectoryError:
+        logger.error("The provided location %s is not a directory.", service_folder)
+        collected_services = False
+    except PermissionError as e:
+        logger.error("Failed to find services due to permission issues: %s", str(e))
+        collected_services = False
+    except FileNotFoundError:
+        logger.error("Service folder not found.")
+        collected_services = False
+
+    if not collected_services:
+        return None
+
+    return service_list
+
+
 def generate_systemd_service_string(
     description: str,
     service_user: str,
@@ -243,28 +278,9 @@ def start_services(service_folder: str) -> bool:
     if not daemon_reload():
         return False
 
-    # Get list of services
-    service_folder_path = pathops.LocalPath(service_folder)
-    collected_services = True
-    service_list = []
+    service_list = _get_services_list(service_folder)
 
-    try:
-        for service_file in service_folder_path.iterdir():
-            if service_file.suffix == ".service":
-                service_list.append(service_file.name)
-            else:
-                logger.debug("Skipping non-service file %s", service_file.name)
-    except NotADirectoryError:
-        logger.error("The provided location %s is not a directory.", service_folder)
-        collected_services = False
-    except PermissionError as e:
-        logger.error("Failed to start services due to permission issues: %s", str(e))
-        collected_services = False
-    except FileNotFoundError:
-        logger.error("Service folder not found.")
-        collected_services = False
-
-    if not collected_services:
+    if service_list is None:
         return False
 
     services_started = True
