@@ -7,6 +7,7 @@
 
 import json
 import logging
+from time import sleep
 
 import jubilant
 
@@ -20,7 +21,9 @@ def test_service_status(app: str, juju: jubilant.Juju):
         app: The app in charge of this unit.
         juju: The juju model in charge of the app.
     """
+    # Wait until machine is ready, then wait an extra 30 seconds for services to fully activate.
     juju.wait(jubilant.all_active)
+    sleep(30)
 
     def get_services_dict(app: str, juju: jubilant.Juju) -> dict[str, dict[str, bool | str]]:
         """Get a dictionary of running systemd services on the app's unit 0.
