@@ -10,7 +10,6 @@ from charmlibs import pathops
 
 from service_management import (
     create_systemd_service_file,
-    daemon_reload,
     start_service,
     stop_service,
     wait_for_service_active,
@@ -275,9 +274,6 @@ def start_services(service_folder: str) -> bool:
     Returns:
         True if all services were started successfully, False otherwise.
     """
-    if not daemon_reload():
-        return False
-
     service_list = _get_services_list(service_folder)
 
     if service_list is None:

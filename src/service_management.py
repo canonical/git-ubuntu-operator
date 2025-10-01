@@ -67,7 +67,7 @@ def create_systemd_service_file(filename: str, local_folder: str, file_content: 
     except OSError as e:
         logger.error("Failed to create service file link %s due to OS error: %s", filename, str(e))
 
-    return file_linked
+    return file_linked and daemon_reload()
 
 
 def start_service(service_name: str) -> bool:
