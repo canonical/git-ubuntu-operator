@@ -10,12 +10,47 @@ from charmlibs import pathops
 
 from service_management import (
     create_systemd_service_file,
-    daemon_reload,
     start_service,
     stop_service,
+    wait_for_service_active,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _get_services_list(service_folder: str) -> list[str] | None:
+    """Get the list of services from the git-ubuntu service folder.
+
+    Args:
+        service_folder: The name of the folder containing the service files.
+
+    Returns:
+        A list of service names or None if checking the folder failed.
+    """
+    service_folder_path = pathops.LocalPath(service_folder)
+    collected_services = True
+    service_list = []
+
+    try:
+        for service_file in service_folder_path.iterdir():
+            if service_file.suffix == ".service":
+                service_list.append(service_file.name)
+            else:
+                logger.debug("Skipping non-service file %s", service_file.name)
+    except NotADirectoryError:
+        logger.error("The provided location %s is not a directory.", service_folder)
+        collected_services = False
+    except PermissionError as e:
+        logger.error("Failed to find services due to permission issues: %s", str(e))
+        collected_services = False
+    except FileNotFoundError:
+        logger.error("Service folder not found.")
+        collected_services = False
+
+    if not collected_services:
+        return None
+
+    return service_list
 
 
 def generate_systemd_service_string(
@@ -231,7 +266,7 @@ def setup_worker_service(
 
 
 def start_services(service_folder: str) -> bool:
-    """Start all git-ubuntu services.
+    """Start all git-ubuntu services and wait for startup to complete.
 
     Args:
         service_folder: The name of the folder containing the service files.
@@ -239,33 +274,33 @@ def start_services(service_folder: str) -> bool:
     Returns:
         True if all services were started successfully, False otherwise.
     """
-    if not daemon_reload():
+    service_list = _get_services_list(service_folder)
+
+    if service_list is None:
         return False
 
-    service_folder_path = pathops.LocalPath(service_folder)
     services_started = True
 
-    try:
-        for service_file in service_folder_path.iterdir():
-            if service_file.suffix == ".service":
-                if start_service(service_file.name):
-                    logger.info("Started service %s", service_file.name)
-                else:
-                    logger.error("Failed to start service %s", service_file.name)
-                    services_started = False
-            else:
-                logger.debug("Skipping non-service file %s", service_file.name)
-    except NotADirectoryError:
-        logger.error("The provided location %s is not a directory.", service_folder)
-        services_started = False
-    except PermissionError as e:
-        logger.error("Failed to start services due to permission issues: %s", str(e))
-        services_started = False
-    except FileNotFoundError:
-        logger.error("Service folder not found.")
-        services_started = False
+    # Start services
+    for service in service_list:
+        if start_service(service):
+            logger.info("Started service %s.", service)
+        else:
+            logger.error("Failed to start service %s", service)
+            services_started = False
 
-    return services_started
+    if not services_started:
+        return False
+
+    # Wait for startup
+    for service in service_list:
+        if wait_for_service_active(service, 30):
+            logger.info("Service %s startup complete.", service)
+        else:
+            logger.error("Service %s startup failed.", service)
+            return False
+
+    return True
 
 
 def stop_services(service_folder: str) -> bool:
@@ -277,28 +312,19 @@ def stop_services(service_folder: str) -> bool:
     Returns:
         True if all services were stopped successfully, False otherwise.
     """
-    service_folder_path = pathops.LocalPath(service_folder)
+    service_list = _get_services_list(service_folder)
+
+    if service_list is None:
+        return False
+
     services_stopped = True
 
-    try:
-        for service_file in service_folder_path.iterdir():
-            if service_file.suffix == ".service":
-                if stop_service(service_file.name):
-                    logger.info("Stopped service %s", service_file.name)
-                else:
-                    logger.error("Failed to stop service %s", service_file.name)
-                    services_stopped = False
-            else:
-                logger.debug("Skipping non-service file %s", service_file.name)
-    except NotADirectoryError:
-        logger.error("The provided location %s is not a directory.", service_folder)
-        services_stopped = False
-    except PermissionError as e:
-        logger.error("Failed to start services due to permission issues: %s", str(e))
-        services_stopped = False
-    except FileNotFoundError:
-        logger.error("Service folder not found.")
-        services_stopped = False
+    for service in service_list:
+        if stop_service(service):
+            logger.info("Stopped service %s", service)
+        else:
+            logger.error("Failed to stop service %s", service)
+            services_stopped = False
 
     return services_stopped
 

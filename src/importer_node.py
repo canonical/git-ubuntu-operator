@@ -118,7 +118,7 @@ def setup_primary_node(
 
 
 def start(git_ubuntu_user_home: str) -> bool:
-    """Start all git-ubuntu services.
+    """Start all git-ubuntu services and wait for their startups to complete.
 
     Args:
         git_ubuntu_user_home: The home directory of the git-ubuntu user.

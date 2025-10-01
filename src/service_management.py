@@ -5,6 +5,7 @@
 """Systemd service management functions."""
 
 import logging
+import time
 from os import link
 
 from charmlibs import pathops
@@ -66,7 +67,7 @@ def create_systemd_service_file(filename: str, local_folder: str, file_content: 
     except OSError as e:
         logger.error("Failed to create service file link %s due to OS error: %s", filename, str(e))
 
-    return file_linked
+    return file_linked and daemon_reload()
 
 
 def start_service(service_name: str) -> bool:
@@ -109,6 +110,31 @@ def stop_service(service_name: str) -> bool:
 
     logger.debug("Systemd service %s is not running, leaving it alone.", service_name)
     return True
+
+
+def wait_for_service_active(service_name: str, timeout_sec: int) -> bool:
+    """Wait until a systemd service is active.
+
+    Args:
+        service_name: The name of the service to wait for.
+        timeout_sec: The cutoff time for failure.
+
+    Returns:
+        True if the service started within timeout, False otherwise.
+    """
+    logger.info("Waiting for service %s to start...", service_name)
+
+    start_time = time.time()
+    while time.time() - start_time < timeout_sec:
+        if systemd.service_running(service_name):
+            logger.info(
+                "Service %s started, took %d seconds.", service_name, int(time.time() - start_time)
+            )
+            return True
+        time.sleep(1)
+
+    logger.error("Failed to start service %s within %d seconds.", service_name, timeout_sec)
+    return False
 
 
 def daemon_reload() -> bool:
