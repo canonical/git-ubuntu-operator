@@ -95,6 +95,15 @@ class GitUbuntuCharm(ops.CharmBase):
             return num_workers
         return 0
 
+    @property
+    def _lpuser_ssh_key(self) -> str | None:
+        try:
+            secret_id = self.config.get("lpuser-ssh-key")
+            ssh_key_secret = self.model.get_secret(id=secret_id)
+            return ssh_key_secret.get_content().get("lpuser-ssh-key")
+        except (KeyError, ops.SecretNotFoundError, ops.model.ModelError):
+            return None
+
     def _refresh_importer_node(self) -> None:
         """Remove old and install new git-ubuntu services."""
         self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu services.")
