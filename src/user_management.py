@@ -177,6 +177,67 @@ def setup_git_ubuntu_user_files(user: str, home_dir: str, git_ubuntu_source_url:
     return _write_python_keyring_config_file(user, home_dir)
 
 
+def update_ssh_private_key(user: str, home_dir: str, ssh_key_data: str) -> bool:
+    """Create or refresh the .ssh/id private key file for launchpad access.
+
+    Args:
+        user: The git-ubuntu user.
+        home_dir: The home directory for the user.
+        ssh_key_data: The private key data.
+
+    Returns:
+        True if directory and file creation succeeded, False otherwise.
+    """
+    ssh_key_file = pathops.LocalPath(home_dir, ".ssh/id")
+
+    parent_dir = ssh_key_file.parent
+    ssh_dir_success = False
+
+    try:
+        parent_dir.mkdir(mode=0o700, parents=True, user=user, group=user)
+        ssh_dir_success = True
+    except FileExistsError:
+        logger.info("ssh directory %s already exists.", parent_dir.as_posix())
+        ssh_dir_success = True
+    except NotADirectoryError:
+        logger.error(
+            "User ssh directory location %s already exists as a file.", parent_dir.as_posix()
+        )
+    except PermissionError:
+        logger.error(
+            "Unable to create user ssh directory %s: permission denied.",
+            parent_dir.as_posix(),
+        )
+    except LookupError:
+        logger.error(
+            "Unable to create user ssh directory %s: unknown user/group %s",
+            parent_dir.as_posix(),
+            user,
+        )
+
+    if not ssh_dir_success:
+        return False
+
+    key_success = False
+
+    try:
+        ssh_key_file.write_text(
+            ssh_key_data,
+            mode=0o600,
+            user=user,
+            group=user,
+        )
+        key_success = True
+    except (FileNotFoundError, NotADirectoryError) as e:
+        logger.error("Failed to create ssh private key due to directory issues: %s", str(e))
+    except LookupError as e:
+        logger.error("Failed to create ssh private key due to issues with root user: %s", str(e))
+    except PermissionError as e:
+        logger.error("Failed to create ssh private key due to permission issues: %s", str(e))
+
+    return key_success
+
+
 def set_snap_homedirs(home_dir: str) -> bool:
     """Allow snaps to run for a user with a given home directory.
 
