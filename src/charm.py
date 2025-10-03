@@ -98,9 +98,9 @@ class GitUbuntuCharm(ops.CharmBase):
     @property
     def _lpuser_ssh_key(self) -> str | None:
         try:
-            secret_id = str(self.config["lpuser-ssh-key"])
+            secret_id = str(self.config["lpuser_ssh_key"])
             ssh_key_secret = self.model.get_secret(id=secret_id)
-            ssh_key_data = ssh_key_secret.get_content().get("lpuser-ssh-key")
+            ssh_key_data = ssh_key_secret.get_content().get("sshkey")
 
             if ssh_key_data is not None:
                 return str(ssh_key_data)
