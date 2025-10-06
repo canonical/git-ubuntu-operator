@@ -29,4 +29,5 @@ header:
     - 'LICENSE'
     - 'pyproject.toml'
     - 'lib/**'
+    - 'tests/integration/test-ssh-key'
   comment: on-failure
