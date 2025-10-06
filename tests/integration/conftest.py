@@ -39,7 +39,7 @@ def charm():
 @pytest.fixture(scope="module")
 def app(juju: jubilant.Juju, charm: Path):
     """Deploy git-ubuntu charm with publishing off."""
-    juju.deploy(f"./{charm}", config={"publish": False})
+    juju.deploy(f"./{charm}")
     juju.wait(lambda status: jubilant.all_active(status, APP_NAME))
 
     yield APP_NAME

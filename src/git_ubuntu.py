@@ -338,16 +338,22 @@ def destroy_services(service_folder: str) -> bool:
     Returns:
         True if all services were deleted successfully, False otherwise.
     """
-    service_folder_path = pathops.LocalPath(service_folder)
-    services_removed = False
+    service_list = _get_services_list(service_folder)
 
+    if service_list is None:
+        return False
+
+    service_folder_path = pathops.LocalPath(service_folder)
+    systemd_service_path = pathops.LocalPath("/etc/systemd/system/")
+
+    services_folder_services_removed = False
+    systemd_folder_services_removed = False
+
+    # Remove from service folder
     try:
-        for service_file in service_folder_path.iterdir():
-            if service_file.suffix == ".service":
-                service_file.unlink(missing_ok=True)
-            else:
-                logger.debug("Skipping removal of non-service file %s", service_file.name)
-        services_removed = True
+        for service in service_list:
+            pathops.LocalPath(service_folder_path, service).unlink(missing_ok=True)
+        services_folder_services_removed = True
     except NotADirectoryError:
         logger.error("The provided location %s is not a directory.", service_folder)
     except PermissionError as e:
@@ -357,4 +363,18 @@ def destroy_services(service_folder: str) -> bool:
     except (IOError, OSError) as e:
         logger.error("Failed to remove a service file due to error: %s", str(e))
 
-    return services_removed
+    # Remove from /etc/systemd/system
+    try:
+        for service in service_list:
+            pathops.LocalPath(systemd_service_path, service).unlink(missing_ok=True)
+        systemd_folder_services_removed = True
+    except NotADirectoryError:
+        logger.error("/etc/systemd/system is not a directory.")
+    except PermissionError as e:
+        logger.error("Failed to start services due to permission issues: %s", str(e))
+    except FileNotFoundError:
+        logger.error("/etc/systemd/system folder not found.")
+    except (IOError, OSError) as e:
+        logger.error("Failed to remove a service file due to error: %s", str(e))
+
+    return services_folder_services_removed and systemd_folder_services_removed

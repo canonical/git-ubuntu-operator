@@ -115,7 +115,33 @@ def test_installed_dump_files(app: str, juju: jubilant.Juju):
         app: The app in charge of this unit.
         juju: The juju model in charge of the app.
     """
+    juju.wait(jubilant.all_active)
+
     debian_keyring_status = juju.ssh(
         f"{app}/0", "test -f /etc/git-ubuntu/debian-archive-keyring.gpg | echo $?", ""
     ).strip()
     assert debian_keyring_status == "0"
+
+
+def test_update_config_with_ssh_key(app: str, juju: jubilant.Juju):
+    """Wait on other tests, then update config with an ssh key and test that it exists.
+
+    Args:
+        app: The app in charge of this unit.
+        juju: The juju model in charge of the app.
+    """
+    juju.wait(jubilant.all_active)
+    sleep(60)
+
+    with open("tests/integration/test-ssh-key", "r") as file:
+        file_content = file.read()
+
+        secret_uri = juju.add_secret("lpuser-ssh-key", {"sshkey": file_content})
+        juju.grant_secret("lpuser-ssh-key", app)
+
+        juju.config(app, {"lpuser_ssh_key": secret_uri})
+        juju.wait(jubilant.all_active)
+
+        ssh_key = juju.ssh(f"{app}/0", "sudo -u git-ubuntu cat /var/local/git-ubuntu/.ssh/id", "")
+
+        assert file_content == ssh_key

@@ -95,6 +95,21 @@ class GitUbuntuCharm(ops.CharmBase):
             return num_workers
         return 0
 
+    @property
+    def _lpuser_ssh_key(self) -> str | None:
+        try:
+            secret_id = str(self.config["lpuser_ssh_key"])
+            ssh_key_secret = self.model.get_secret(id=secret_id)
+            ssh_key_data = ssh_key_secret.get_content().get("sshkey")
+
+            if ssh_key_data is not None:
+                return str(ssh_key_data)
+
+        except (KeyError, ops.SecretNotFoundError, ops.model.ModelError):
+            pass
+
+        return None
+
     def _refresh_importer_node(self) -> None:
         """Remove old and install new git-ubuntu services."""
         self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu services.")
@@ -103,13 +118,27 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Failed to remove old git-ubuntu services.")
             return
 
+        will_publish = self._is_publishing_active
+        ssh_key_data = self._lpuser_ssh_key
+
+        if will_publish:
+            if ssh_key_data is None:
+                logger.warning(
+                    "ssh private key unavailable, blocking publishing to Launchpad for now."
+                )
+                will_publish = False
+            else:
+                usr.update_ssh_private_key(
+                    GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, ssh_key_data
+                )
+
         if self._is_primary:
             if not node.setup_primary_node(
                 GIT_UBUNTU_USER_HOME_DIR,
                 self._node_id,
                 self._num_workers,
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
-                self._is_publishing_active,
+                will_publish,
                 self._controller_port,
             ):
                 self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
@@ -121,7 +150,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._node_id,
                 self._num_workers,
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
-                self._is_publishing_active,
+                will_publish,
                 self._controller_port,
                 self._controller_ip,
             ):
