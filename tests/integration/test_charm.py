@@ -7,6 +7,7 @@
 
 import json
 import logging
+import socket
 from time import sleep
 
 import jubilant
@@ -121,6 +122,34 @@ def test_installed_dump_files(app: str, juju: jubilant.Juju):
         f"{app}/0", "test -f /etc/git-ubuntu/debian-archive-keyring.gpg | echo $?", ""
     ).strip()
     assert debian_keyring_status == "0"
+
+
+def test_controller_port_open(app: str, juju: jubilant.Juju):
+    """Confirm that the git-ubuntu controller network port opens.
+
+    Args:
+        app: The app in charge of this unit.
+        juju: The juju model in charge of the app.
+    """
+    juju.wait(jubilant.all_active)
+
+    def is_port_open(host: str, port: int) -> bool:
+        """Check if a port is opened in a particular host.
+
+        Args:
+            host: The host network location.
+            port: The port number to check.
+
+        Returns: True if the port is open, False otherwise.
+        """
+        try:
+            with socket.create_connection((host, port), timeout=5):
+                return True
+        except (ConnectionRefusedError, TimeoutError):
+            return False
+
+    address = juju.status().apps[app].units[f"{app}/0"].public_address
+    assert is_port_open(address, 1692)
 
 
 def test_update_config_with_ssh_key(app: str, juju: jubilant.Juju):

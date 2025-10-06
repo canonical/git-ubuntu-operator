@@ -110,6 +110,27 @@ class GitUbuntuCharm(ops.CharmBase):
 
         return None
 
+    def _open_controller_port(self) -> bool:
+        """Open the configured controller network port.
+
+        Returns:
+            True if the port was opened, False otherwise.
+        """
+        try:
+            port = self._controller_port
+
+            if port > 0:
+                self.unit.set_ports(port)
+                logger.info("Opened controller port %d", port)
+            else:
+                self.unit.status = ops.BlockedStatus("Invalid controller port configuration.")
+                return False
+        except ops.ModelError:
+            self.unit.status = ops.BlockedStatus("Failed to open controller port.")
+            return False
+
+        return True
+
     def _refresh_importer_node(self) -> None:
         """Remove old and install new git-ubuntu services."""
         self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu services.")
@@ -260,6 +281,7 @@ class GitUbuntuCharm(ops.CharmBase):
             not self._update_git_user_config()
             or not self._update_lpuser_config()
             or not self._update_git_ubuntu_snap()
+            or not self._open_controller_port()
         ):
             return
 
