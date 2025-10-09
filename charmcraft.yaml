@@ -41,14 +41,12 @@ charm-libs:
   - lib: operator_libs_linux.systemd
     version: "1"
 
+peers:
+  replicas:
+    interface: git_ubuntu_work_assignments
+
 config:
   options:
-    controller_ip:
-      description: |
-        The IP or network location of the primary node. This option is ignored
-        for the primary node.
-      default: "127.0.0.1"
-      type: string
     controller_port:
       description: |
         The network port on the primary node used for import assignments, must

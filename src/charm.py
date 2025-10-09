@@ -50,9 +50,15 @@ class GitUbuntuCharm(ops.CharmBase):
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
+        self.framework.observe(
+            self.on.replicas_relation_changed, self._on_replicas_relation_changed
+        )
+        self.framework.observe(self.on.replicas_relation_joined, self._on_replicas_relation_joined)
+
     @property
-    def _controller_ip(self) -> str:
-        return str(self.config.get("controller_ip"))
+    def _peer_relation(self) -> ops.Relation | None:
+        """Get replica peer relation if available."""
+        return self.model.get_relation("replicas")
 
     @property
     def _controller_port(self) -> int:
@@ -131,6 +137,28 @@ class GitUbuntuCharm(ops.CharmBase):
 
         return True
 
+    def _get_primary_node_ip(self) -> str | None:
+        """Get the primary node's network address - local if primary or juju binding if secondary.
+
+        Returns:
+            The primary IP as a string if available, None otherwise.
+        """
+        if self._is_primary:
+            return "127.0.0.1"
+
+        bind_address = None
+
+        if self._peer_relation is not None:
+            network_binding = self.model.get_binding(self._peer_relation)
+            if network_binding is not None:
+                bind_address = network_binding.network.bind_address
+
+        if bind_address is None:
+            logger.warning("Failed to get primary IP, secondary node needs a relation.")
+            return None
+
+        return str(bind_address)
+
     def _refresh_importer_node(self) -> None:
         """Remove old and install new git-ubuntu services."""
         self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu services.")
@@ -166,6 +194,12 @@ class GitUbuntuCharm(ops.CharmBase):
                 return
             logger.info("Initialized importer node as primary.")
         else:
+            primary_ip = self._get_primary_node_ip()
+
+            if primary_ip is None:
+                self.unit.status = ops.BlockedStatus("Secondary node requires a peer relation.")
+                return
+
             if not node.setup_secondary_node(
                 GIT_UBUNTU_USER_HOME_DIR,
                 self._node_id,
@@ -173,7 +207,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 will_publish,
                 self._controller_port,
-                self._controller_ip,
+                primary_ip,
             ):
                 self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
                 return
@@ -287,6 +321,16 @@ class GitUbuntuCharm(ops.CharmBase):
 
         # Initialize or re-install git-ubuntu services as needed.
         self._refresh_importer_node()
+
+    def _on_replicas_relation_changed(self, _: ops.RelationChangedEvent) -> None:
+        """Refresh services for secondary nodes when peer relations change."""
+        if not self._is_primary:
+            self._refresh_importer_node()
+
+    def _on_replicas_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
+        """Refresh services for secondary nodes when joined with a peer."""
+        if not self._is_primary:
+            self._refresh_importer_node()
 
 
 if __name__ == "__main__":  # pragma: nocover
