@@ -43,7 +43,7 @@ charm-libs:
 
 peers:
   replicas:
-    interface: git_ubuntu_work_assignments
+    interface: git_ubuntu_primary_info
 
 config:
   options:
@@ -74,13 +74,6 @@ config:
         The ID of this git-ubuntu operator node, must be unique in the network.
       default: 0
       type: int
-    primary:
-      description: |
-        If this is the primary git-ubuntu importer node, containing the Broker
-        and Poller instances. Non-primary nodes will only contain Worker
-        instances.
-      default: True
-      type: boolean
     publish:
       description: |
         If updates should be pushed to Launchpad. Set to False for local

@@ -14,6 +14,7 @@ https://juju.is/docs/sdk/create-a-minimal-kubernetes-charm
 
 import logging
 from pathlib import Path
+from socket import getfqdn
 
 import ops
 
@@ -50,10 +51,10 @@ class GitUbuntuCharm(ops.CharmBase):
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
+        self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(
             self.on.replicas_relation_changed, self._on_replicas_relation_changed
         )
-        self.framework.observe(self.on.replicas_relation_joined, self._on_replicas_relation_joined)
 
     @property
     def _peer_relation(self) -> ops.Relation | None:
@@ -84,9 +85,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
     @property
     def _is_primary(self) -> bool:
-        if self.config.get("primary"):
-            return True
-        return False
+        return self.unit.is_leader()
 
     @property
     def _is_publishing_active(self) -> bool:
@@ -116,6 +115,15 @@ class GitUbuntuCharm(ops.CharmBase):
 
         return None
 
+    @property
+    def _git_ubuntu_primary_relation(self) -> ops.Relation | None:
+        """Get the peer relation that contains the primary node IP.
+
+        Returns:
+            The peer relation or None if it does not exist.
+        """
+        return self.model.get_relation("replicas")
+
     def _open_controller_port(self) -> bool:
         """Open the configured controller network port.
 
@@ -137,7 +145,23 @@ class GitUbuntuCharm(ops.CharmBase):
 
         return True
 
-    def _get_primary_node_ip(self) -> str | None:
+    def _set_peer_primary_node_address(self) -> bool:
+        """Set the primary node's IP to this unit's in the peer relation databag.
+
+        Returns:
+            True if the data was updated, False otherwise.
+        """
+        relation = self._git_ubuntu_primary_relation
+
+        if relation:
+            new_primary_address = getfqdn()
+            relation.data[self.app]["primary_address"] = new_primary_address
+            logger.info("Updated primary node address to %s", new_primary_address)
+            return True
+
+        return False
+
+    def _get_primary_node_address(self) -> str | None:
         """Get the primary node's network address - local if primary or juju binding if secondary.
 
         Returns:
@@ -146,18 +170,17 @@ class GitUbuntuCharm(ops.CharmBase):
         if self._is_primary:
             return "127.0.0.1"
 
-        bind_address = None
+        relation = self._git_ubuntu_primary_relation
 
-        if self._peer_relation is not None:
-            network_binding = self.model.get_binding(self._peer_relation)
-            if network_binding is not None:
-                bind_address = network_binding.network.bind_address
+        if relation:
+            primary_address = relation.data[self.app]["primary_address"]
 
-        if bind_address is None:
-            logger.warning("Failed to get primary IP, secondary node needs a relation.")
-            return None
+            if primary_address is not None and len(str(primary_address)) > 0:
+                logger.info("Found primary node address %s", primary_address)
+                return str(primary_address)
 
-        return str(bind_address)
+        logger.warning("No primary node address found.")
+        return None
 
     def _refresh_importer_node(self) -> None:
         """Remove old and install new git-ubuntu services."""
@@ -194,7 +217,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 return
             logger.info("Initialized importer node as primary.")
         else:
-            primary_ip = self._get_primary_node_ip()
+            primary_ip = self._get_primary_node_address()
 
             if primary_ip is None:
                 self.unit.status = ops.BlockedStatus("Secondary node requires a peer relation.")
@@ -322,13 +345,17 @@ class GitUbuntuCharm(ops.CharmBase):
         # Initialize or re-install git-ubuntu services as needed.
         self._refresh_importer_node()
 
+    def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
+        """Refresh services and update peer data when the unit is elected as leader."""
+        if self._set_peer_primary_node_address():
+            self._refresh_importer_node()
+        else:
+            self.unit.status = ops.BlockedStatus(
+                "Failed to update primary node IP in peer relation."
+            )
+
     def _on_replicas_relation_changed(self, _: ops.RelationChangedEvent) -> None:
         """Refresh services for secondary nodes when peer relations change."""
-        if not self._is_primary:
-            self._refresh_importer_node()
-
-    def _on_replicas_relation_joined(self, _: ops.RelationJoinedEvent) -> None:
-        """Refresh services for secondary nodes when joined with a peer."""
         if not self._is_primary:
             self._refresh_importer_node()
 

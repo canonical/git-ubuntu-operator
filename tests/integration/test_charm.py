@@ -37,7 +37,7 @@ def test_service_status(app: str, juju: jubilant.Juju):
             A dict mapping unit name to if the service is active and its description.
         """
         service_output = juju.ssh(
-            f"{app}/0",
+            f"{app}/leader",
             "systemctl list-units --type service --full --all --output json --no-pager | cat -v",
             "",
         )
@@ -85,11 +85,12 @@ def test_installed_apps(app: str, juju: jubilant.Juju):
     """
     juju.wait(jubilant.all_active)
 
-    def check_deb_installed(app: str, juju: jubilant.Juju, package_name: str) -> bool:
-        """Check if a deb pkg is installed on the app's unit 0.
+    def check_deb_installed(app: str, unit: int, juju: jubilant.Juju, package_name: str) -> bool:
+        """Check if a deb pkg is installed on a specific unit.
 
         Args:
             app: The app in charge of this unit.
+            unit: The unit number to check
             juju: The juju model in charge of the app.
             package_name: The name of the deb package.
 
@@ -97,16 +98,22 @@ def test_installed_apps(app: str, juju: jubilant.Juju):
             True if the package is installed, False otherwise.
         """
         install_status = juju.ssh(
-            f"{app}/0", f"dpkg-query --show --showformat='${{Status}}' {package_name}"
+            f"{app}/{unit}", f"dpkg-query --show --showformat='${{Status}}' {package_name}"
         )
         return "installed" in install_status
 
-    assert check_deb_installed(app, juju, "git")
-    assert check_deb_installed(app, juju, "sqlite3")
+    assert check_deb_installed(app, 0, juju, "git")
+    assert check_deb_installed(app, 0, juju, "sqlite3")
+    assert check_deb_installed(app, 1, juju, "git")
+    assert check_deb_installed(app, 1, juju, "sqlite3")
 
-    git_ubuntu_status = juju.ssh(f"{app}/0", "snap list | grep git-ubuntu", "")
-    assert "latest/beta" in git_ubuntu_status
-    assert "classic" in git_ubuntu_status
+    git_ubuntu_status_1 = juju.ssh(f"{app}/0", "snap list | grep git-ubuntu", "")
+    assert "latest/beta" in git_ubuntu_status_1
+    assert "classic" in git_ubuntu_status_1
+
+    git_ubuntu_status_2 = juju.ssh(f"{app}/1", "snap list | grep git-ubuntu", "")
+    assert "latest/beta" in git_ubuntu_status_2
+    assert "classic" in git_ubuntu_status_2
 
 
 def test_installed_dump_files(app: str, juju: jubilant.Juju):
@@ -119,13 +126,13 @@ def test_installed_dump_files(app: str, juju: jubilant.Juju):
     juju.wait(jubilant.all_active)
 
     debian_keyring_status = juju.ssh(
-        f"{app}/0", "test -f /etc/git-ubuntu/debian-archive-keyring.gpg | echo $?", ""
+        f"{app}/leader", "test -f /etc/git-ubuntu/debian-archive-keyring.gpg | echo $?", ""
     ).strip()
     assert debian_keyring_status == "0"
 
 
 def test_controller_port_open(app: str, juju: jubilant.Juju):
-    """Confirm that the git-ubuntu controller network port opens.
+    """Confirm that the git-ubuntu controller leader network port opens.
 
     Args:
         app: The app in charge of this unit.
@@ -148,7 +155,12 @@ def test_controller_port_open(app: str, juju: jubilant.Juju):
         except (ConnectionRefusedError, TimeoutError):
             return False
 
-    address = juju.status().apps[app].units[f"{app}/0"].public_address
+    address = None
+    for unit in juju.status().apps[app].units.values():
+        if unit.leader:
+            address = unit.public_address
+
+    assert address is not None
     assert is_port_open(address, 1692)
 
 
@@ -171,6 +183,8 @@ def test_update_config_with_ssh_key(app: str, juju: jubilant.Juju):
         juju.config(app, {"lpuser_ssh_key": secret_uri})
         juju.wait(jubilant.all_active)
 
-        ssh_key = juju.ssh(f"{app}/0", "sudo -u git-ubuntu cat /var/local/git-ubuntu/.ssh/id", "")
+        ssh_key = juju.ssh(
+            f"{app}/leader", "sudo -u git-ubuntu cat /var/local/git-ubuntu/.ssh/id", ""
+        )
 
         assert file_content == ssh_key
