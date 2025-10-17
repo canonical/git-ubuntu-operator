@@ -26,18 +26,18 @@ def test_service_status(app: str, juju: jubilant.Juju):
     juju.wait(jubilant.all_active)
     sleep(30)
 
-    def get_services_dict(app: str, juju: jubilant.Juju) -> dict[str, dict[str, bool | str]]:
-        """Get a dictionary of running systemd services on the app's unit 0.
+    def get_services_dict(unit_name: str, juju: jubilant.Juju) -> dict[str, dict[str, bool | str]]:
+        """Get a dictionary of running systemd services on the app's unit.
 
         Args:
-            app: The app in charge of this unit.
+            unit_name: The name of the unit to check.
             juju: The juju model in charge of the app.
 
         Returns:
             A dict mapping unit name to if the service is active and its description.
         """
         service_output = juju.ssh(
-            f"{app}/leader",
+            unit_name,
             "systemctl list-units --type service --full --all --output json --no-pager | cat -v",
             "",
         )
@@ -52,28 +52,33 @@ def test_service_status(app: str, juju: jubilant.Juju):
 
         return service_dict
 
-    services = get_services_dict(app, juju)
+    for unit_name, unit in juju.status().get_units(app).items():
+        services = get_services_dict(unit_name, juju)
 
-    assert services["git-ubuntu-importer-service-broker.service"]["active"]
-    assert (
-        services["git-ubuntu-importer-service-broker.service"]["description"]
-        == "git-ubuntu importer service broker"
-    )
-    assert services["git-ubuntu-importer-service-poller.service"]["active"]
-    assert (
-        services["git-ubuntu-importer-service-poller.service"]["description"]
-        == "git-ubuntu importer service poller"
-    )
-    assert services["git-ubuntu-importer-service-worker0_0.service"]["active"]
-    assert (
-        services["git-ubuntu-importer-service-worker0_0.service"]["description"]
-        == "git-ubuntu importer service worker"
-    )
-    assert services["git-ubuntu-importer-service-worker0_1.service"]["active"]
-    assert (
-        services["git-ubuntu-importer-service-worker0_1.service"]["description"]
-        == "git-ubuntu importer service worker"
-    )
+        if unit.leader:
+            assert services["git-ubuntu-importer-service-broker.service"]["active"]
+            assert (
+                services["git-ubuntu-importer-service-broker.service"]["description"]
+                == "git-ubuntu importer service broker"
+            )
+            assert services["git-ubuntu-importer-service-poller.service"]["active"]
+            assert (
+                services["git-ubuntu-importer-service-poller.service"]["description"]
+                == "git-ubuntu importer service poller"
+            )
+
+        node_id = int(unit_name.split("/")[-1])
+
+        assert services[f"git-ubuntu-importer-service-worker{node_id}_0.service"]["active"]
+        assert (
+            services[f"git-ubuntu-importer-service-worker{node_id}_0.service"]["description"]
+            == "git-ubuntu importer service worker"
+        )
+        assert services[f"git-ubuntu-importer-service-worker{node_id}_1.service"]["active"]
+        assert (
+            services[f"git-ubuntu-importer-service-worker{node_id}_1.service"]["description"]
+            == "git-ubuntu importer service worker"
+        )
 
 
 def test_installed_apps(app: str, juju: jubilant.Juju):
@@ -90,7 +95,7 @@ def test_installed_apps(app: str, juju: jubilant.Juju):
 
         Args:
             app: The app in charge of this unit.
-            unit: The unit number to check
+            unit: The unit number to check.
             juju: The juju model in charge of the app.
             package_name: The name of the deb package.
 
@@ -156,7 +161,7 @@ def test_controller_port_open(app: str, juju: jubilant.Juju):
             return False
 
     address = None
-    for unit in juju.status().apps[app].units.values():
+    for unit in juju.status().get_units(app).values():
         if unit.leader:
             address = unit.public_address
 

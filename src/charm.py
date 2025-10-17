@@ -78,10 +78,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
     @property
     def _node_id(self) -> int:
-        node_id = self.config.get("node_id")
-        if isinstance(node_id, int):
-            return node_id
-        return 0
+        return int(self.unit.name.split("/")[-1])
 
     @property
     def _is_primary(self) -> bool:
@@ -130,6 +127,8 @@ class GitUbuntuCharm(ops.CharmBase):
         Returns:
             True if the port was opened, False otherwise.
         """
+        self.unit.status = ops.MaintenanceStatus("Opening controller port.")
+
         try:
             port = self._controller_port
 
@@ -151,6 +150,8 @@ class GitUbuntuCharm(ops.CharmBase):
         Returns:
             True if the data was updated, False otherwise.
         """
+        self.unit.status = ops.MaintenanceStatus("Setting primary node address in peer relation.")
+
         relation = self._git_ubuntu_primary_relation
 
         if relation:
@@ -238,8 +239,8 @@ class GitUbuntuCharm(ops.CharmBase):
 
         self.unit.status = ops.ActiveStatus("Importer node install complete.")
 
-    def _on_start(self, _: ops.StartEvent) -> None:
-        """Handle start event."""
+    def _start_services(self):
+        """Start the services and note the result through status."""
         if node.start(GIT_UBUNTU_USER_HOME_DIR):
             node_type_str = "primary" if self._is_primary else "secondary"
             self.unit.status = ops.ActiveStatus(
@@ -247,6 +248,10 @@ class GitUbuntuCharm(ops.CharmBase):
             )
         else:
             self.unit.status = ops.BlockedStatus("Failed to start services.")
+
+    def _on_start(self, _: ops.StartEvent) -> None:
+        """Handle start event."""
+        self._start_services()
 
     def _update_git_user_config(self) -> bool:
         """Attempt to update git config with the default git-ubuntu user name and email."""
@@ -347,9 +352,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
         """Refresh services and update peer data when the unit is elected as leader."""
-        if self._set_peer_primary_node_address():
-            self._refresh_importer_node()
-        else:
+        if not self._set_peer_primary_node_address():
             self.unit.status = ops.BlockedStatus(
                 "Failed to update primary node IP in peer relation."
             )
@@ -358,6 +361,7 @@ class GitUbuntuCharm(ops.CharmBase):
         """Refresh services for secondary nodes when peer relations change."""
         if not self._is_primary:
             self._refresh_importer_node()
+            self._start_services()
 
 
 if __name__ == "__main__":  # pragma: nocover

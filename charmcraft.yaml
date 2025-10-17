@@ -69,11 +69,6 @@ config:
         An ssh private key that matches with a public key associated with the
         lpuser account on Launchpad.
       type: secret
-    node_id:
-      description: |
-        The ID of this git-ubuntu operator node, must be unique in the network.
-      default: 0
-      type: int
     publish:
       description: |
         If updates should be pushed to Launchpad. Set to False for local
