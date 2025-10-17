@@ -239,7 +239,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         self.unit.status = ops.ActiveStatus("Importer node install complete.")
 
-    def _start_services(self):
+    def _start_services(self) -> None:
         """Start the services and note the result through status."""
         if node.start(GIT_UBUNTU_USER_HOME_DIR):
             node_type_str = "primary" if self._is_primary else "secondary"
