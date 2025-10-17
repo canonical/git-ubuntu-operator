@@ -45,6 +45,9 @@ peers:
   replicas:
     interface: git_ubuntu_primary_info
 
+links:
+  documentation: https://discourse.charmhub.io/t/git-ubuntu-operator-documentation/19098
+
 config:
   options:
     controller_port:
