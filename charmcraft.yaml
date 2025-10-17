@@ -1,0 +1,85 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: git-ubuntu
+title: Git-Ubuntu Package Importer Charm
+summary: A charm for deploying git-ubuntu for package importing.
+description: |
+  **Git-Ubuntu Operator** is a [charm](https://juju.is/charms-architecture)
+  that deploys [git-ubuntu](https://launchpad.net/git-ubuntu) for importing and
+  publishing git histories associated with Ubuntu packages.
+
+type: charm
+base: ubuntu@24.04
+platforms:
+  amd64:
+
+parts:
+  git-ubuntu-charm:
+    plugin: charm
+    source: .
+
+  debian-archive-keyring:
+    plugin: dump
+    source: keyring
+    organize:
+      debian-archive-keyring.gpg: keyring/debian-archive-keyring.gpg
+
+  files:
+    plugin: dump
+    source: .
+    stage:
+      - LICENSE
+      - README.md
+      - icon.svg
+
+charm-libs:
+  - lib: operator_libs_linux.passwd
+    version: "0"
+  - lib: operator-libs-linux.snap
+    version: "2"
+  - lib: operator_libs_linux.systemd
+    version: "1"
+
+peers:
+  replicas:
+    interface: git_ubuntu_primary_info
+
+links:
+  documentation: https://discourse.charmhub.io/t/git-ubuntu-operator-documentation/19098
+
+config:
+  options:
+    controller_port:
+      description: |
+        The network port on the primary node used for import assignments, must
+        be consistent across nodes.
+      default: 1692
+      type: int
+    channel:
+      description: |
+        Channel for the git-ubuntu snap.
+      default: "beta"
+      type: string
+    lpuser:
+      description: |
+        Launchpad user used to push updates to the official git repositories.
+        This user must be a member of ~git-ubuntu-import.
+      default: "git-ubuntu-bot"
+      type: string
+    lpuser_ssh_key:
+      description: |
+        An ssh private key that matches with a public key associated with the
+        lpuser account on Launchpad.
+      type: secret
+    publish:
+      description: |
+        If updates should be pushed to Launchpad. Set to False for local
+        testing.
+      default: True
+      type: boolean
+    workers:
+      description: |
+        The number of git-ubuntu worker processes to maintain.
+      default: 2
+      type: int
