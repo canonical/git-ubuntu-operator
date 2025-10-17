@@ -14,6 +14,7 @@ https://juju.is/docs/sdk/create-a-minimal-kubernetes-charm
 
 import logging
 from pathlib import Path
+from socket import getfqdn
 
 import ops
 
@@ -50,9 +51,15 @@ class GitUbuntuCharm(ops.CharmBase):
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
+        self.framework.observe(self.on.leader_elected, self._on_leader_elected)
+        self.framework.observe(
+            self.on.replicas_relation_changed, self._on_replicas_relation_changed
+        )
+
     @property
-    def _controller_ip(self) -> str:
-        return str(self.config.get("controller_ip"))
+    def _peer_relation(self) -> ops.Relation | None:
+        """Get replica peer relation if available."""
+        return self.model.get_relation("replicas")
 
     @property
     def _controller_port(self) -> int:
@@ -71,16 +78,11 @@ class GitUbuntuCharm(ops.CharmBase):
 
     @property
     def _node_id(self) -> int:
-        node_id = self.config.get("node_id")
-        if isinstance(node_id, int):
-            return node_id
-        return 0
+        return int(self.unit.name.split("/")[-1])
 
     @property
     def _is_primary(self) -> bool:
-        if self.config.get("primary"):
-            return True
-        return False
+        return self.unit.is_leader()
 
     @property
     def _is_publishing_active(self) -> bool:
@@ -108,6 +110,77 @@ class GitUbuntuCharm(ops.CharmBase):
         except (KeyError, ops.SecretNotFoundError, ops.model.ModelError):
             pass
 
+        return None
+
+    @property
+    def _git_ubuntu_primary_relation(self) -> ops.Relation | None:
+        """Get the peer relation that contains the primary node IP.
+
+        Returns:
+            The peer relation or None if it does not exist.
+        """
+        return self.model.get_relation("replicas")
+
+    def _open_controller_port(self) -> bool:
+        """Open the configured controller network port.
+
+        Returns:
+            True if the port was opened, False otherwise.
+        """
+        self.unit.status = ops.MaintenanceStatus("Opening controller port.")
+
+        try:
+            port = self._controller_port
+
+            if port > 0:
+                self.unit.set_ports(port)
+                logger.info("Opened controller port %d", port)
+            else:
+                self.unit.status = ops.BlockedStatus("Invalid controller port configuration.")
+                return False
+        except ops.ModelError:
+            self.unit.status = ops.BlockedStatus("Failed to open controller port.")
+            return False
+
+        return True
+
+    def _set_peer_primary_node_address(self) -> bool:
+        """Set the primary node's IP to this unit's in the peer relation databag.
+
+        Returns:
+            True if the data was updated, False otherwise.
+        """
+        self.unit.status = ops.MaintenanceStatus("Setting primary node address in peer relation.")
+
+        relation = self._git_ubuntu_primary_relation
+
+        if relation:
+            new_primary_address = getfqdn()
+            relation.data[self.app]["primary_address"] = new_primary_address
+            logger.info("Updated primary node address to %s", new_primary_address)
+            return True
+
+        return False
+
+    def _get_primary_node_address(self) -> str | None:
+        """Get the primary node's network address - local if primary or juju binding if secondary.
+
+        Returns:
+            The primary IP as a string if available, None otherwise.
+        """
+        if self._is_primary:
+            return "127.0.0.1"
+
+        relation = self._git_ubuntu_primary_relation
+
+        if relation:
+            primary_address = relation.data[self.app]["primary_address"]
+
+            if primary_address is not None and len(str(primary_address)) > 0:
+                logger.info("Found primary node address %s", primary_address)
+                return str(primary_address)
+
+        logger.warning("No primary node address found.")
         return None
 
     def _refresh_importer_node(self) -> None:
@@ -145,6 +218,12 @@ class GitUbuntuCharm(ops.CharmBase):
                 return
             logger.info("Initialized importer node as primary.")
         else:
+            primary_ip = self._get_primary_node_address()
+
+            if primary_ip is None:
+                self.unit.status = ops.BlockedStatus("Secondary node requires a peer relation.")
+                return
+
             if not node.setup_secondary_node(
                 GIT_UBUNTU_USER_HOME_DIR,
                 self._node_id,
@@ -152,7 +231,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 will_publish,
                 self._controller_port,
-                self._controller_ip,
+                primary_ip,
             ):
                 self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
                 return
@@ -160,8 +239,8 @@ class GitUbuntuCharm(ops.CharmBase):
 
         self.unit.status = ops.ActiveStatus("Importer node install complete.")
 
-    def _on_start(self, _: ops.StartEvent) -> None:
-        """Handle start event."""
+    def _start_services(self) -> None:
+        """Start the services and note the result through status."""
         if node.start(GIT_UBUNTU_USER_HOME_DIR):
             node_type_str = "primary" if self._is_primary else "secondary"
             self.unit.status = ops.ActiveStatus(
@@ -169,6 +248,10 @@ class GitUbuntuCharm(ops.CharmBase):
             )
         else:
             self.unit.status = ops.BlockedStatus("Failed to start services.")
+
+    def _on_start(self, _: ops.StartEvent) -> None:
+        """Handle start event."""
+        self._start_services()
 
     def _update_git_user_config(self) -> bool:
         """Attempt to update git config with the default git-ubuntu user name and email."""
@@ -260,11 +343,25 @@ class GitUbuntuCharm(ops.CharmBase):
             not self._update_git_user_config()
             or not self._update_lpuser_config()
             or not self._update_git_ubuntu_snap()
+            or not self._open_controller_port()
         ):
             return
 
         # Initialize or re-install git-ubuntu services as needed.
         self._refresh_importer_node()
+
+    def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
+        """Refresh services and update peer data when the unit is elected as leader."""
+        if not self._set_peer_primary_node_address():
+            self.unit.status = ops.BlockedStatus(
+                "Failed to update primary node IP in peer relation."
+            )
+
+    def _on_replicas_relation_changed(self, _: ops.RelationChangedEvent) -> None:
+        """Refresh services for secondary nodes when peer relations change."""
+        if not self._is_primary:
+            self._refresh_importer_node()
+            self._start_services()
 
 
 if __name__ == "__main__":  # pragma: nocover
