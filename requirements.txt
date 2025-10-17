@@ -1,0 +1,3 @@
+ops ~= 2.17
+charmlibs-pathops >= 1.0.0
+charmlibs-apt >= 1.0.0
