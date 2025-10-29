@@ -30,4 +30,5 @@ header:
     - 'pyproject.toml'
     - 'lib/**'
     - 'tests/integration/test-ssh-key'
+    - 'uv.lock'
   comment: on-failure

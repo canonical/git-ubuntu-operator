@@ -1,3 +1,68 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+[project]
+name = "git-ubuntu-operator"
+version = "1.0.0"
+requires-python = ">=3.12"
+
+# Charm code dependencies
+dependencies = [
+    "charmlibs-apt>=1.0.0",
+    "charmlibs-pathops>=1.0.0",
+    "ops~=2.17",
+]
+
+[dependency-groups]
+
+charmlibs = [
+    "charmlibs-apt>=1.0.0",
+    "charmlibs-pathops>=1.0.0",
+]
+
+format = [
+    "black",
+    "isort",
+]
+
+lint = [
+    "mypy",
+    "isort",
+    "black",
+    "flake8-docstrings",
+    "flake8-docstrings-complete",
+    "flake8-builtins",
+    "flake8-test-docs",
+    "pep8-naming",
+    "codespell",
+    "pylint",
+    "pyproject-flake8",
+    "pydocstyle",
+    "types-PyYAML",
+]
+
+unit = [
+    "pytest",
+    "coverage[toml]",
+    "ops[testing]",
+]
+
+coverage-report = [
+    "pytest",
+    "coverage[toml]",
+    "ops[testing]",
+]
+
+static = [
+    "pyright",
+    "ops[testing]",
+]
+
+integration = [
+    "pytest",
+    "jubilant~=1.0",
+]
+
 # Testing tools configuration
 [tool.coverage.run]
 branch = true
@@ -54,8 +119,8 @@ lint.extend-ignore = [
     "D409",
     "D413",
 ]
-extend-exclude = ["__pycache__", "*.egg_info"]
 lint.per-file-ignores = {"tests/*" = ["D100","D101","D102","D103","D104"]}
+extend-exclude = ["__pycache__", "*.egg_info"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
