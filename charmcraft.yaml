@@ -16,8 +16,10 @@ platforms:
 
 parts:
   git-ubuntu-charm:
-    plugin: charm
+    plugin: uv
     source: .
+    build-snaps:
+      - astral-uv
 
   debian-archive-keyring:
     plugin: dump
