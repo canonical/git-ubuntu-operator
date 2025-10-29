@@ -13,6 +13,56 @@ dependencies = [
     "ops~=2.17",
 ]
 
+[dependency-groups]
+
+charmlibs = [
+    "charmlibs-apt>=1.0.0",
+    "charmlibs-pathops>=1.0.0",
+]
+
+format = [
+    "black",
+    "isort",
+]
+
+lint = [
+    "mypy",
+    "isort",
+    "black",
+    "flake8-docstrings",
+    "flake8-docstrings-complete",
+    "flake8-builtins",
+    "flake8-test-docs",
+    "pep8-naming",
+    "codespell",
+    "pylint",
+    "pyproject-flake8",
+    "pydocstyle",
+    "types-PyYAML",
+]
+
+unit = [
+    "pytest",
+    "coverage[toml]",
+    "ops[testing]",
+]
+
+coverage-report = [
+    "pytest",
+    "coverage[toml]",
+    "ops[testing]",
+]
+
+static = [
+    "pyright",
+    "ops[testing]",
+]
+
+integration = [
+    "pytest",
+    "jubilant~=1.0",
+]
+
 # Testing tools configuration
 [tool.coverage.run]
 branch = true
