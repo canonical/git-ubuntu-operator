@@ -48,14 +48,14 @@ peers:
     interface: git_ubuntu_primary_info
 
 links:
+  documentation: |
+    https://discourse.charmhub.io/t/git-ubuntu-operator-documentation/19098
   website: |
     https://charmhub.io/git-ubuntu
   issues: |
     https://github.com/canonical/git-ubuntu-operator/issues
   source: |
     https://github.com/canonical/git-ubuntu-operator
-  documentation: |
-    https://discourse.charmhub.io/t/git-ubuntu-operator-documentation/19098
 
 config:
   options:
