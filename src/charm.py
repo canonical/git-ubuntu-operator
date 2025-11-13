@@ -208,6 +208,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         will_publish = self._is_publishing_active
         ssh_key_data = self._lpuser_ssh_key
+        lp_key_data = self._lpuser_lp_key
 
         if will_publish:
             if ssh_key_data is None:
@@ -219,6 +220,15 @@ class GitUbuntuCharm(ops.CharmBase):
                 usr.update_ssh_private_key(
                     GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, ssh_key_data
                 )
+
+        if lp_key_data is None:
+            logger.warning(
+                "Launchpad keyring entry unavailable, unable to gather package updates."
+            )
+        else:
+            usr.update_launchpad_keyring_secret(
+                GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, lp_key_data
+            )
 
         if self._is_primary:
             if not node.setup_primary_node(
