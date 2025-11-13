@@ -81,6 +81,11 @@ config:
         An ssh private key that matches with a public key associated with the
         lpuser account on Launchpad.
       type: secret
+    lpuser_lp_key:
+      description: |
+        A Launchpad keyring entry that allows launchpadlib access, associated
+        with the lpuser account on Launchpad.
+      type: secret
     publish:
       description: |
         If updates should be pushed to Launchpad. Set to False for local
