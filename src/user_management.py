@@ -209,6 +209,44 @@ def update_ssh_private_key(user: str, home_dir: str, ssh_key_data: str) -> bool:
     return key_success
 
 
+def update_launchpad_keyring_secret(user: str, home_dir: str, lp_key_data: str) -> bool:
+    """Create or refresh the python keyring file for launchpad access.
+
+    Args:
+        user: The git-ubuntu user.
+        home_dir: The home directory for the user.
+        lp_key_data: The private keyring data.
+
+    Returns:
+        True if directory and file creation succeeded, False otherwise.
+    """
+    lp_key_file = pathops.LocalPath(home_dir, ".local/share/python_keyring/keyring_pass.cfg")
+
+    parent_dir = lp_key_file.parent
+
+    if not _mkdir_for_user_with_error_checking(parent_dir, user):
+        return False
+
+    key_success = False
+
+    try:
+        lp_key_file.write_text(
+            lp_key_data,
+            mode=0o600,
+            user=user,
+            group=user,
+        )
+        key_success = True
+    except (FileNotFoundError, NotADirectoryError) as e:
+        logger.error("Failed to create lp key entry due to directory issues: %s", str(e))
+    except LookupError as e:
+        logger.error("Failed to create lp key entry due to issues with root user: %s", str(e))
+    except PermissionError as e:
+        logger.error("Failed to create lp key entry due to permission issues: %s", str(e))
+
+    return key_success
+
+
 def set_snap_homedirs(home_dir: str) -> bool:
     """Allow snaps to run for a user with a given home directory.
 
