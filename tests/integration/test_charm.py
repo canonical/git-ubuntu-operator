@@ -67,18 +67,19 @@ def test_service_status(app: str, juju: jubilant.Juju):
                 == "git-ubuntu importer service poller"
             )
 
-        node_id = int(unit_name.split("/")[-1])
+        else:
+            node_id = int(unit_name.split("/")[-1])
 
-        assert services[f"git-ubuntu-importer-service-worker{node_id}_0.service"]["active"]
-        assert (
-            services[f"git-ubuntu-importer-service-worker{node_id}_0.service"]["description"]
-            == "git-ubuntu importer service worker"
-        )
-        assert services[f"git-ubuntu-importer-service-worker{node_id}_1.service"]["active"]
-        assert (
-            services[f"git-ubuntu-importer-service-worker{node_id}_1.service"]["description"]
-            == "git-ubuntu importer service worker"
-        )
+            assert services[f"git-ubuntu-importer-service-worker{node_id}_0.service"]["active"]
+            assert (
+                services[f"git-ubuntu-importer-service-worker{node_id}_0.service"]["description"]
+                == "git-ubuntu importer service worker"
+            )
+            assert services[f"git-ubuntu-importer-service-worker{node_id}_1.service"]["active"]
+            assert (
+                services[f"git-ubuntu-importer-service-worker{node_id}_1.service"]["description"]
+                == "git-ubuntu importer service worker"
+            )
 
 
 def test_installed_apps(app: str, juju: jubilant.Juju):

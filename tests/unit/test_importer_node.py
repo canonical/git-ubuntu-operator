@@ -37,19 +37,14 @@ def test_setup_secondary_node_failure(mock_setup_worker):
 
 @patch("importer_node.git_ubuntu.setup_poller_service")
 @patch("importer_node.git_ubuntu.setup_broker_service")
-@patch("importer_node.setup_secondary_node")
-def test_setup_primary_node_success(mock_secondary, mock_broker, mock_poller):
+def test_setup_primary_node_success(mock_broker, mock_poller):
     """Test successful primary node setup."""
-    mock_secondary.return_value = True
     mock_broker.return_value = True
     mock_poller.return_value = True
 
-    result = importer_node.setup_primary_node(
-        "/var/local/git-ubuntu", 1, 2, "git-ubuntu", True, 1692
-    )
+    result = importer_node.setup_primary_node("/var/local/git-ubuntu", "git-ubuntu", 1692)
 
     assert result is True
-    mock_secondary.assert_called_once()
     mock_broker.assert_called_once()
     mock_poller.assert_called_once()
 
@@ -59,9 +54,7 @@ def test_setup_primary_node_secondary_failure(mock_secondary):
     """Test primary node setup with secondary failure."""
     mock_secondary.return_value = False
 
-    result = importer_node.setup_primary_node(
-        "/var/local/git-ubuntu", 1, 2, "git-ubuntu", True, 1692
-    )
+    result = importer_node.setup_primary_node("/var/local/git-ubuntu", "git-ubuntu", 1692)
 
     assert result is False
 
@@ -73,9 +66,7 @@ def test_setup_primary_node_broker_failure(mock_secondary, mock_broker):
     mock_secondary.return_value = True
     mock_broker.return_value = False
 
-    result = importer_node.setup_primary_node(
-        "/var/local/git-ubuntu", 1, 2, "git-ubuntu", True, 1692
-    )
+    result = importer_node.setup_primary_node("/var/local/git-ubuntu", "git-ubuntu", 1692)
 
     assert result is False
 
@@ -89,9 +80,7 @@ def test_setup_primary_node_poller_failure(mock_secondary, mock_broker, mock_pol
     mock_broker.return_value = True
     mock_poller.return_value = False
 
-    result = importer_node.setup_primary_node(
-        "/var/local/git-ubuntu", 1, 2, "git-ubuntu", True, 1692
-    )
+    result = importer_node.setup_primary_node("/var/local/git-ubuntu", "git-ubuntu", 1692)
 
     assert result is False
 

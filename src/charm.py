@@ -233,10 +233,7 @@ class GitUbuntuCharm(ops.CharmBase):
         if self._is_primary:
             if not node.setup_primary_node(
                 GIT_UBUNTU_USER_HOME_DIR,
-                self._node_id,
-                self._num_workers,
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
-                will_publish,
                 self._controller_port,
             ):
                 self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")

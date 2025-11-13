@@ -94,6 +94,6 @@ config:
       type: boolean
     workers:
       description: |
-        The number of git-ubuntu worker processes to maintain.
+        The number of git-ubuntu worker processes to maintain per secondary node.
       default: 2
       type: int
