@@ -30,6 +30,42 @@ def _run_command_as_user(user: str, command: str) -> bool:
     return True
 
 
+def _mkdir_for_user_with_error_checking(
+    directory: pathops.LocalPath, user: str, mode: int = 0o755
+) -> bool:
+    """Create a directory and handle possible mkdir errors.
+
+    Args:
+        directory: The directory to create, skipping if it exists.
+        user: The user who should own this directory.
+        mode: The permissions mode for the folder, defaults to standard rwxr-xr-x.
+
+    Returns:
+        True if the folder was created, False otherwise.
+    """
+    try:
+        directory.mkdir(parents=True, user=user, group=user, mode=mode)
+        return True
+    except FileExistsError:
+        logger.info("Directory %s already exists.", directory.as_posix())
+        return True
+    except NotADirectoryError:
+        logger.error("Directory location %s already exists as a file.", directory.as_posix())
+    except PermissionError:
+        logger.error(
+            "Unable to create new directory %s: permission denied.",
+            directory.as_posix(),
+        )
+    except LookupError:
+        logger.error(
+            "Unable to create directory %s: unknown user/group %s",
+            directory.as_posix(),
+            user,
+        )
+
+    return False
+
+
 def _clone_git_ubuntu_source(cloning_user: str, parent_directory: str, source_url: str) -> bool:
     """Clone the git-ubuntu git repo to a given directory.
 
@@ -71,31 +107,8 @@ def _write_python_keyring_config_file(user: str, home_dir: str) -> bool:
     python_keyring_config = pathops.LocalPath(home_dir, ".config/python_keyring/keyringrc.cfg")
 
     parent_dir = python_keyring_config.parent
-    config_dir_success = False
 
-    try:
-        parent_dir.mkdir(parents=True, user=user, group=user)
-        config_dir_success = True
-    except FileExistsError:
-        logger.info("User config directory %s already exists.", parent_dir.as_posix())
-        config_dir_success = True
-    except NotADirectoryError:
-        logger.error(
-            "User config directory location %s already exists as a file.", parent_dir.as_posix()
-        )
-    except PermissionError:
-        logger.error(
-            "Unable to create new user config directory %s: permission denied.",
-            parent_dir.as_posix(),
-        )
-    except LookupError:
-        logger.error(
-            "Unable to create config directory %s: unknown user/group %s",
-            parent_dir.as_posix(),
-            user,
-        )
-
-    if not config_dir_success:
+    if not _mkdir_for_user_with_error_checking(parent_dir, user):
         return False
 
     keyring_config_success = False
@@ -151,27 +164,8 @@ def setup_git_ubuntu_user_files(user: str, home_dir: str, git_ubuntu_source_url:
 
     # Create the services folder if it does not yet exist
     services_dir = pathops.LocalPath(home_dir, "services")
-    services_dir_success = False
 
-    try:
-        services_dir.mkdir(parents=True, user=user, group=user)
-        logger.info("Created services directory %s.", services_dir)
-        services_dir_success = True
-    except FileExistsError:
-        logger.info("Services directory %s already exists.", services_dir)
-        services_dir_success = True
-    except NotADirectoryError:
-        logger.error("Service directory location %s already exists as a file.", services_dir)
-    except PermissionError:
-        logger.error("Unable to create new service directory %s: permission denied.", services_dir)
-    except LookupError:
-        logger.error(
-            "Unable to create service directory %s: unknown user/group %s",
-            services_dir,
-            user,
-        )
-
-    if not services_dir_success:
+    if not _mkdir_for_user_with_error_checking(services_dir, user):
         return False
 
     return _write_python_keyring_config_file(user, home_dir)
@@ -191,31 +185,8 @@ def update_ssh_private_key(user: str, home_dir: str, ssh_key_data: str) -> bool:
     ssh_key_file = pathops.LocalPath(home_dir, ".ssh/id")
 
     parent_dir = ssh_key_file.parent
-    ssh_dir_success = False
 
-    try:
-        parent_dir.mkdir(mode=0o700, parents=True, user=user, group=user)
-        ssh_dir_success = True
-    except FileExistsError:
-        logger.info("ssh directory %s already exists.", parent_dir.as_posix())
-        ssh_dir_success = True
-    except NotADirectoryError:
-        logger.error(
-            "User ssh directory location %s already exists as a file.", parent_dir.as_posix()
-        )
-    except PermissionError:
-        logger.error(
-            "Unable to create user ssh directory %s: permission denied.",
-            parent_dir.as_posix(),
-        )
-    except LookupError:
-        logger.error(
-            "Unable to create user ssh directory %s: unknown user/group %s",
-            parent_dir.as_posix(),
-            user,
-        )
-
-    if not ssh_dir_success:
+    if not _mkdir_for_user_with_error_checking(parent_dir, user, 0o700):
         return False
 
     key_success = False
@@ -234,6 +205,44 @@ def update_ssh_private_key(user: str, home_dir: str, ssh_key_data: str) -> bool:
         logger.error("Failed to create ssh private key due to issues with root user: %s", str(e))
     except PermissionError as e:
         logger.error("Failed to create ssh private key due to permission issues: %s", str(e))
+
+    return key_success
+
+
+def update_launchpad_keyring_secret(user: str, home_dir: str, lp_key_data: str) -> bool:
+    """Create or refresh the python keyring file for launchpad access.
+
+    Args:
+        user: The git-ubuntu user.
+        home_dir: The home directory for the user.
+        lp_key_data: The private keyring data.
+
+    Returns:
+        True if directory and file creation succeeded, False otherwise.
+    """
+    lp_key_file = pathops.LocalPath(home_dir, ".local/share/python_keyring/keyring_pass.cfg")
+
+    parent_dir = lp_key_file.parent
+
+    if not _mkdir_for_user_with_error_checking(parent_dir, user):
+        return False
+
+    key_success = False
+
+    try:
+        lp_key_file.write_text(
+            lp_key_data,
+            mode=0o600,
+            user=user,
+            group=user,
+        )
+        key_success = True
+    except (FileNotFoundError, NotADirectoryError) as e:
+        logger.error("Failed to create lp key entry due to directory issues: %s", str(e))
+    except LookupError as e:
+        logger.error("Failed to create lp key entry due to issues with root user: %s", str(e))
+    except PermissionError as e:
+        logger.error("Failed to create lp key entry due to permission issues: %s", str(e))
 
     return key_success
 

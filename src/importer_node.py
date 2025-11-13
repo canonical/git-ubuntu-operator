@@ -57,37 +57,20 @@ def setup_secondary_node(
 
 def setup_primary_node(
     git_ubuntu_user_home: str,
-    node_id: int,
-    num_workers: int,
     system_user: str,
-    push_to_lp: bool,
     primary_port: int,
 ) -> bool:
-    """Set up necessary services for a primary git-ubuntu importer node.
+    """Set up poller and broker services to create a primary git-ubuntu importer node.
 
     Args:
         git_ubuntu_user_home: The home directory of the git-ubuntu user.
-        node_id: The unique ID of this node.
-        num_workers: The number of worker instances to set up.
         system_user: The user + group to run the services as.
-        push_to_lp: True if publishing repositories to Launchpad.
         primary_port: The network port used for worker assignments.
 
     Returns:
         True if installation succeeded, False otherwise.
     """
     services_folder = pathops.LocalPath(git_ubuntu_user_home, "services")
-
-    if not setup_secondary_node(
-        git_ubuntu_user_home,
-        node_id,
-        num_workers,
-        system_user,
-        push_to_lp,
-        primary_port,
-        "127.0.0.1",
-    ):
-        return False
 
     # Setup broker service.
     if not git_ubuntu.setup_broker_service(
