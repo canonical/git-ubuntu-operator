@@ -30,6 +30,42 @@ def _run_command_as_user(user: str, command: str) -> bool:
     return True
 
 
+def _mkdir_for_user_with_error_checking(
+    directory: pathops.LocalPath, user: str, mode: int = 0o755
+) -> bool:
+    """Create a directory and handle possible mkdir errors.
+
+    Args:
+        directory: The directory to create, skipping if it exists.
+        user: The user who should own this directory.
+        mode: The permissions mode for the folder, defaults to standard rwxr-xr-x.
+
+    Returns:
+        True if the folder was created, False otherwise.
+    """
+    try:
+        directory.mkdir(parents=True, user=user, group=user, mode=mode)
+        return True
+    except FileExistsError:
+        logger.info("Directory %s already exists.", directory.as_posix())
+        return True
+    except NotADirectoryError:
+        logger.error("Directory location %s already exists as a file.", directory.as_posix())
+    except PermissionError:
+        logger.error(
+            "Unable to create new directory %s: permission denied.",
+            directory.as_posix(),
+        )
+    except LookupError:
+        logger.error(
+            "Unable to create directory %s: unknown user/group %s",
+            directory.as_posix(),
+            user,
+        )
+
+    return False
+
+
 def _clone_git_ubuntu_source(cloning_user: str, parent_directory: str, source_url: str) -> bool:
     """Clone the git-ubuntu git repo to a given directory.
 
@@ -71,31 +107,8 @@ def _write_python_keyring_config_file(user: str, home_dir: str) -> bool:
     python_keyring_config = pathops.LocalPath(home_dir, ".config/python_keyring/keyringrc.cfg")
 
     parent_dir = python_keyring_config.parent
-    config_dir_success = False
 
-    try:
-        parent_dir.mkdir(parents=True, user=user, group=user)
-        config_dir_success = True
-    except FileExistsError:
-        logger.info("User config directory %s already exists.", parent_dir.as_posix())
-        config_dir_success = True
-    except NotADirectoryError:
-        logger.error(
-            "User config directory location %s already exists as a file.", parent_dir.as_posix()
-        )
-    except PermissionError:
-        logger.error(
-            "Unable to create new user config directory %s: permission denied.",
-            parent_dir.as_posix(),
-        )
-    except LookupError:
-        logger.error(
-            "Unable to create config directory %s: unknown user/group %s",
-            parent_dir.as_posix(),
-            user,
-        )
-
-    if not config_dir_success:
+    if not _mkdir_for_user_with_error_checking(parent_dir, user):
         return False
 
     keyring_config_success = False
@@ -151,27 +164,8 @@ def setup_git_ubuntu_user_files(user: str, home_dir: str, git_ubuntu_source_url:
 
     # Create the services folder if it does not yet exist
     services_dir = pathops.LocalPath(home_dir, "services")
-    services_dir_success = False
 
-    try:
-        services_dir.mkdir(parents=True, user=user, group=user)
-        logger.info("Created services directory %s.", services_dir)
-        services_dir_success = True
-    except FileExistsError:
-        logger.info("Services directory %s already exists.", services_dir)
-        services_dir_success = True
-    except NotADirectoryError:
-        logger.error("Service directory location %s already exists as a file.", services_dir)
-    except PermissionError:
-        logger.error("Unable to create new service directory %s: permission denied.", services_dir)
-    except LookupError:
-        logger.error(
-            "Unable to create service directory %s: unknown user/group %s",
-            services_dir,
-            user,
-        )
-
-    if not services_dir_success:
+    if not _mkdir_for_user_with_error_checking(services_dir, user):
         return False
 
     return _write_python_keyring_config_file(user, home_dir)
@@ -191,31 +185,8 @@ def update_ssh_private_key(user: str, home_dir: str, ssh_key_data: str) -> bool:
     ssh_key_file = pathops.LocalPath(home_dir, ".ssh/id")
 
     parent_dir = ssh_key_file.parent
-    ssh_dir_success = False
 
-    try:
-        parent_dir.mkdir(mode=0o700, parents=True, user=user, group=user)
-        ssh_dir_success = True
-    except FileExistsError:
-        logger.info("ssh directory %s already exists.", parent_dir.as_posix())
-        ssh_dir_success = True
-    except NotADirectoryError:
-        logger.error(
-            "User ssh directory location %s already exists as a file.", parent_dir.as_posix()
-        )
-    except PermissionError:
-        logger.error(
-            "Unable to create user ssh directory %s: permission denied.",
-            parent_dir.as_posix(),
-        )
-    except LookupError:
-        logger.error(
-            "Unable to create user ssh directory %s: unknown user/group %s",
-            parent_dir.as_posix(),
-            user,
-        )
-
-    if not ssh_dir_success:
+    if not _mkdir_for_user_with_error_checking(parent_dir, user, 0o700):
         return False
 
     key_success = False
