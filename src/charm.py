@@ -113,6 +113,21 @@ class GitUbuntuCharm(ops.CharmBase):
         return None
 
     @property
+    def _lpuser_lp_key(self) -> str | None:
+        try:
+            secret_id = str(self.config["lpuser_lp_key"])
+            lp_key_secret = self.model.get_secret(id=secret_id)
+            lp_key_data = lp_key_secret.get_content().get("lpkey")
+
+            if lp_key_data is not None:
+                return str(lp_key_data)
+
+        except (KeyError, ops.SecretNotFoundError, ops.model.ModelError):
+            pass
+
+        return None
+
+    @property
     def _git_ubuntu_primary_relation(self) -> ops.Relation | None:
         """Get the peer relation that contains the primary node IP.
 
