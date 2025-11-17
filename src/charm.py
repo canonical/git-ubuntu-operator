@@ -113,6 +113,21 @@ class GitUbuntuCharm(ops.CharmBase):
         return None
 
     @property
+    def _lpuser_lp_key(self) -> str | None:
+        try:
+            secret_id = str(self.config["lpuser_lp_key"])
+            lp_key_secret = self.model.get_secret(id=secret_id)
+            lp_key_data = lp_key_secret.get_content().get("lpkey")
+
+            if lp_key_data is not None:
+                return str(lp_key_data)
+
+        except (KeyError, ops.SecretNotFoundError, ops.model.ModelError):
+            pass
+
+        return None
+
+    @property
     def _git_ubuntu_primary_relation(self) -> ops.Relation | None:
         """Get the peer relation that contains the primary node IP.
 
@@ -193,6 +208,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         will_publish = self._is_publishing_active
         ssh_key_data = self._lpuser_ssh_key
+        lp_key_data = self._lpuser_lp_key
 
         if will_publish:
             if ssh_key_data is None:
@@ -205,13 +221,19 @@ class GitUbuntuCharm(ops.CharmBase):
                     GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, ssh_key_data
                 )
 
+        if lp_key_data is None:
+            logger.warning(
+                "Launchpad keyring entry unavailable, unable to gather package updates."
+            )
+        else:
+            usr.update_launchpad_keyring_secret(
+                GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, lp_key_data
+            )
+
         if self._is_primary:
             if not node.setup_primary_node(
                 GIT_UBUNTU_USER_HOME_DIR,
-                self._node_id,
-                self._num_workers,
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
-                will_publish,
                 self._controller_port,
             ):
                 self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")

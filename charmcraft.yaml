@@ -48,7 +48,14 @@ peers:
     interface: git_ubuntu_primary_info
 
 links:
-  documentation: https://discourse.charmhub.io/t/git-ubuntu-operator-documentation/19098
+  documentation: |
+    https://discourse.charmhub.io/t/git-ubuntu-operator-documentation/19098
+  website: |
+    https://charmhub.io/git-ubuntu
+  issues: |
+    https://github.com/canonical/git-ubuntu-operator/issues
+  source: |
+    https://github.com/canonical/git-ubuntu-operator
 
 config:
   options:
@@ -74,6 +81,11 @@ config:
         An ssh private key that matches with a public key associated with the
         lpuser account on Launchpad.
       type: secret
+    lpuser_lp_key:
+      description: |
+        A Launchpad keyring entry that allows launchpadlib access, associated
+        with the lpuser account on Launchpad.
+      type: secret
     publish:
       description: |
         If updates should be pushed to Launchpad. Set to False for local
@@ -82,6 +94,6 @@ config:
       type: boolean
     workers:
       description: |
-        The number of git-ubuntu worker processes to maintain.
+        The number of git-ubuntu worker processes to maintain per secondary node.
       default: 2
       type: int
