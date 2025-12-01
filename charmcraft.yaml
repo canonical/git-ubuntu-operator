@@ -76,15 +76,10 @@ config:
         This user must be a member of ~git-ubuntu-import.
       default: "git-ubuntu-bot"
       type: string
-    lpuser_ssh_key:
+    lpuser_secret_id:
       description: |
-        An ssh private key that matches with a public key associated with the
-        lpuser account on Launchpad.
-      type: secret
-    lpuser_lp_key:
-      description: |
-        A Launchpad keyring entry that allows launchpadlib access, associated
-        with the lpuser account on Launchpad.
+        The secret ID for a vault containing the Launchpad user's lp key token
+        and SSH private key.
       type: secret
     publish:
       description: |

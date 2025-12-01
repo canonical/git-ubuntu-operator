@@ -100,9 +100,9 @@ class GitUbuntuCharm(ops.CharmBase):
     @property
     def _lpuser_ssh_key(self) -> str | None:
         try:
-            secret_id = str(self.config["lpuser_ssh_key"])
-            ssh_key_secret = self.model.get_secret(id=secret_id)
-            ssh_key_data = ssh_key_secret.get_content().get("sshkey")
+            secret_id = str(self.config["lpuser_secret_id"])
+            lpuser_secret = self.model.get_secret(id=secret_id)
+            ssh_key_data = lpuser_secret.get_content().get("sshkey")
 
             if ssh_key_data is not None:
                 return str(ssh_key_data)
@@ -115,9 +115,9 @@ class GitUbuntuCharm(ops.CharmBase):
     @property
     def _lpuser_lp_key(self) -> str | None:
         try:
-            secret_id = str(self.config["lpuser_lp_key"])
-            lp_key_secret = self.model.get_secret(id=secret_id)
-            lp_key_data = lp_key_secret.get_content().get("lpkey")
+            secret_id = str(self.config["lpuser_secret_id"])
+            lpuser_secret = self.model.get_secret(id=secret_id)
+            lp_key_data = lpuser_secret.get_content().get("lpkey")
 
             if lp_key_data is not None:
                 return str(lp_key_data)

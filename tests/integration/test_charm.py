@@ -183,10 +183,10 @@ def test_update_config_with_ssh_key(app: str, juju: jubilant.Juju):
     with open("tests/integration/test-ssh-key", "r") as file:
         file_content = file.read()
 
-        secret_uri = juju.add_secret("lpuser-ssh-key", {"sshkey": file_content})
-        juju.grant_secret("lpuser-ssh-key", app)
+        secret_uri = juju.add_secret("lpuser-secret-id", {"sshkey": file_content})
+        juju.grant_secret("lpuser-secret-id", app)
 
-        juju.config(app, {"lpuser_ssh_key": secret_uri})
+        juju.config(app, {"lpuser_secret_id": secret_uri})
         juju.wait(jubilant.all_active)
 
         ssh_key = juju.ssh(
