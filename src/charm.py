@@ -396,7 +396,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         # Refresh git-ubuntu source code
         self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu source.")
-        if not usr.clone_git_ubuntu_source(
+        if not usr.refresh_git_ubuntu_source(
             GIT_UBUNTU_SYSTEM_USER_USERNAME,
             GIT_UBUNTU_USER_HOME_DIR,
             self._git_ubuntu_source_url,

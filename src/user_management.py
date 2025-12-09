@@ -138,8 +138,8 @@ def setup_git_ubuntu_user_files(user: str, home_dir: str) -> bool:
     return _write_python_keyring_config_file(user, home_dir)
 
 
-def clone_git_ubuntu_source(user: str, home_dir: str, source_url: str) -> bool:
-    """Clone the git-ubuntu git repo to a given directory.
+def refresh_git_ubuntu_source(user: str, home_dir: str, source_url: str) -> bool:
+    """Clone or update the git-ubuntu git repo in the home directory.
 
     Args:
         user: The user to run git clone as.
@@ -156,10 +156,26 @@ def clone_git_ubuntu_source(user: str, home_dir: str, source_url: str) -> bool:
 
     clone_dir = pathops.LocalPath(directory_path, "live-allowlist-denylist-source")
 
-    logger.info("Cloning git-ubuntu source to %s", clone_dir)
-    if not _run_command_as_user(user, f"git clone {source_url} {clone_dir}"):
-        logger.error("Failed to clone git-ubuntu source.")
-        return False
+    if clone_dir.is_dir():
+        logger.info("Updating existing git-ubuntu source in %s", clone_dir)
+
+        # Update origin to the current source url
+        if not _run_command_as_user(user, f"git -C {clone_dir.as_posix()} remote set-url origin {source_url}"):
+            logger.error("Failed to update git-ubuntu source origin.")
+            return False
+
+        # Run git pull to get up to date
+        if not _run_command_as_user(user, f"git -C {clone_dir.as_posix()} pull"):
+            logger.error("Failed to update existing git-ubuntu source.")
+            return False
+        return True
+
+    else:
+        # Clone the repository
+        logger.info("Cloning git-ubuntu source to %s", clone_dir)
+        if not _run_command_as_user(user, f"git clone {source_url} {clone_dir}"):
+            logger.error("Failed to clone git-ubuntu source.")
+            return False
 
     return True
 
