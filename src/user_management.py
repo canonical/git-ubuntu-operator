@@ -129,7 +129,6 @@ def setup_git_ubuntu_user_files(user: str, home_dir: str) -> bool:
     Returns:
         True if the files were installed successfully, False otherwise.
     """
-
     # Create the services folder if it does not yet exist
     services_dir = pathops.LocalPath(home_dir, "services")
 
