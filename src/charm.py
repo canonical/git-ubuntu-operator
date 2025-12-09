@@ -225,13 +225,13 @@ class GitUbuntuCharm(ops.CharmBase):
 
         if self._is_publishing_active:
             if ssh_key_data is None:
-                logger.warning(
-                    "ssh private key unavailable, Launchpad publishing will fail."
-                )
+                logger.warning("ssh private key unavailable, Launchpad publishing will fail.")
             elif not usr.update_ssh_private_key(
                 GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, ssh_key_data
             ):
-                self.unit.status = ops.BlockedStatus("Failed to update SSH key for git-ubuntu user.")
+                self.unit.status = ops.BlockedStatus(
+                    "Failed to update SSH key for git-ubuntu user."
+                )
                 return False
 
         if lp_key_data is None:
@@ -239,9 +239,11 @@ class GitUbuntuCharm(ops.CharmBase):
                 "Launchpad keyring entry unavailable, unable to gather package updates."
             )
         elif not usr.update_launchpad_keyring_secret(
-                GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, lp_key_data
-            ):
-            self.unit.status = ops.BlockedStatus("Failed to update Launchpad keyring for git-ubuntu user.")
+            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, lp_key_data
+        ):
+            self.unit.status = ops.BlockedStatus(
+                "Failed to update Launchpad keyring for git-ubuntu user."
+            )
             return False
 
         return True
@@ -361,8 +363,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user files.")
         if not usr.setup_git_ubuntu_user_files(
-            GIT_UBUNTU_SYSTEM_USER_USERNAME,
-            GIT_UBUNTU_USER_HOME_DIR
+            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR
         ):
             self.unit.status = ops.BlockedStatus("Failed to set up git-ubuntu user files.")
             return

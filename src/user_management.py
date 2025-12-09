@@ -152,9 +152,7 @@ def clone_git_ubuntu_source(user: str, home_dir: str, source_url: str) -> bool:
     """
     directory_path = pathops.LocalPath(home_dir)
     if not directory_path.is_dir():
-        logger.error(
-            "Failed to clone git-ubuntu sources: %s is not a valid directory.", home_dir
-        )
+        logger.error("Failed to clone git-ubuntu sources: %s is not a valid directory.", home_dir)
         return False
 
     clone_dir = pathops.LocalPath(directory_path, "live-allowlist-denylist-source")
