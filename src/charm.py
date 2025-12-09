@@ -33,7 +33,7 @@ GIT_UBUNTU_SYSTEM_USER_USERNAME = "git-ubuntu"
 GIT_UBUNTU_GIT_USER_NAME = "Ubuntu Git Importer"
 GIT_UBUNTU_GIT_EMAIL = "usd-importer-do-not-mail@canonical.com"
 GIT_UBUNTU_USER_HOME_DIR = "/var/local/git-ubuntu"
-GIT_UBUNTU_SOURCE_URL = "https://git.launchpad.net/git-ubuntu"
+GIT_UBUNTU_SOURCE_BASE_URL = "git.launchpad.net/git-ubuntu"
 GIT_UBUNTU_KEYRING_FOLDER = Path(__file__).parent.parent / "keyring"
 
 
@@ -126,6 +126,20 @@ class GitUbuntuCharm(ops.CharmBase):
             pass
 
         return None
+
+    @property
+    def _git_ubuntu_source_url(self) -> str:
+        """Get the git-ubuntu source URL based on config.
+
+        If an SSH private key is provided, get a git+ssh URL, otherwise use https.
+
+        Returns:
+            The git-ubuntu source URL.
+        """
+        if self._lpuser_ssh_key is not None:
+            return f"git+ssh://{self._lp_username}@{GIT_UBUNTU_SOURCE_BASE_URL}"
+
+        return f"https://{GIT_UBUNTU_SOURCE_BASE_URL}"
 
     @property
     def _git_ubuntu_primary_relation(self) -> ops.Relation | None:
@@ -339,7 +353,7 @@ class GitUbuntuCharm(ops.CharmBase):
         if not usr.setup_git_ubuntu_user_files(
             GIT_UBUNTU_SYSTEM_USER_USERNAME,
             GIT_UBUNTU_USER_HOME_DIR,
-            GIT_UBUNTU_SOURCE_URL,
+            self._git_ubuntu_source_url,
         ):
             self.unit.status = ops.BlockedStatus("Failed to set up git-ubuntu user files.")
             return
