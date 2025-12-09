@@ -160,7 +160,9 @@ def refresh_git_ubuntu_source(user: str, home_dir: str, source_url: str) -> bool
         logger.info("Updating existing git-ubuntu source in %s", clone_dir)
 
         # Update origin to the current source url
-        if not _run_command_as_user(user, f"git -C {clone_dir.as_posix()} remote set-url origin {source_url}"):
+        if not _run_command_as_user(
+            user, f"git -C {clone_dir.as_posix()} remote set-url origin {source_url}"
+        ):
             logger.error("Failed to update git-ubuntu source origin.")
             return False
 
@@ -168,14 +170,14 @@ def refresh_git_ubuntu_source(user: str, home_dir: str, source_url: str) -> bool
         if not _run_command_as_user(user, f"git -C {clone_dir.as_posix()} pull"):
             logger.error("Failed to update existing git-ubuntu source.")
             return False
+
         return True
 
-    else:
-        # Clone the repository
-        logger.info("Cloning git-ubuntu source to %s", clone_dir)
-        if not _run_command_as_user(user, f"git clone {source_url} {clone_dir}"):
-            logger.error("Failed to clone git-ubuntu source.")
-            return False
+    # Clone the repository
+    logger.info("Cloning git-ubuntu source to %s", clone_dir)
+    if not _run_command_as_user(user, f"git clone {source_url} {clone_dir}"):
+        logger.error("Failed to clone git-ubuntu source.")
+        return False
 
     return True
 
