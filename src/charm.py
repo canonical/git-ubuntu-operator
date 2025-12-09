@@ -33,7 +33,7 @@ GIT_UBUNTU_SYSTEM_USER_USERNAME = "git-ubuntu"
 GIT_UBUNTU_GIT_USER_NAME = "Ubuntu Git Importer"
 GIT_UBUNTU_GIT_EMAIL = "usd-importer-do-not-mail@canonical.com"
 GIT_UBUNTU_USER_HOME_DIR = "/var/local/git-ubuntu"
-GIT_UBUNTU_SOURCE_URL = "https://git.launchpad.net/git-ubuntu"
+GIT_UBUNTU_SOURCE_BASE_URL = "git.launchpad.net/git-ubuntu"
 GIT_UBUNTU_KEYRING_FOLDER = Path(__file__).parent.parent / "keyring"
 
 
@@ -128,6 +128,20 @@ class GitUbuntuCharm(ops.CharmBase):
         return None
 
     @property
+    def _git_ubuntu_source_url(self) -> str:
+        """Get the git-ubuntu source URL based on config.
+
+        If an SSH private key is provided, get a git+ssh URL, otherwise use https.
+
+        Returns:
+            The git-ubuntu source URL.
+        """
+        if self._lpuser_ssh_key is not None:
+            return f"git+ssh://{self._lp_username}@{GIT_UBUNTU_SOURCE_BASE_URL}"
+
+        return f"https://{GIT_UBUNTU_SOURCE_BASE_URL}"
+
+    @property
     def _git_ubuntu_primary_relation(self) -> ops.Relation | None:
         """Get the peer relation that contains the primary node IP.
 
@@ -198,6 +212,42 @@ class GitUbuntuCharm(ops.CharmBase):
         logger.warning("No primary node address found.")
         return None
 
+    def _refresh_secret_keys(self) -> bool:
+        """Refresh the SSH and Launchpad keys for the git-ubuntu user from secrets.
+
+        Returns:
+            True if the keys were updated successfully, False otherwise.
+        """
+        self.unit.status = ops.MaintenanceStatus("Refreshing secret keys.")
+
+        ssh_key_data = self._lpuser_ssh_key
+        lp_key_data = self._lpuser_lp_key
+
+        if self._is_publishing_active:
+            if ssh_key_data is None:
+                logger.warning("ssh private key unavailable, Launchpad publishing will fail.")
+            elif not usr.update_ssh_private_key(
+                GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, ssh_key_data
+            ):
+                self.unit.status = ops.BlockedStatus(
+                    "Failed to update SSH key for git-ubuntu user."
+                )
+                return False
+
+        if lp_key_data is None:
+            logger.warning(
+                "Launchpad keyring entry unavailable, unable to gather package updates."
+            )
+        elif not usr.update_launchpad_keyring_secret(
+            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, lp_key_data
+        ):
+            self.unit.status = ops.BlockedStatus(
+                "Failed to update Launchpad keyring for git-ubuntu user."
+            )
+            return False
+
+        return True
+
     def _refresh_importer_node(self) -> None:
         """Remove old and install new git-ubuntu services."""
         self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu services.")
@@ -205,30 +255,6 @@ class GitUbuntuCharm(ops.CharmBase):
         if not node.reset(GIT_UBUNTU_USER_HOME_DIR):
             self.unit.status = ops.BlockedStatus("Failed to remove old git-ubuntu services.")
             return
-
-        will_publish = self._is_publishing_active
-        ssh_key_data = self._lpuser_ssh_key
-        lp_key_data = self._lpuser_lp_key
-
-        if will_publish:
-            if ssh_key_data is None:
-                logger.warning(
-                    "ssh private key unavailable, blocking publishing to Launchpad for now."
-                )
-                will_publish = False
-            else:
-                usr.update_ssh_private_key(
-                    GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, ssh_key_data
-                )
-
-        if lp_key_data is None:
-            logger.warning(
-                "Launchpad keyring entry unavailable, unable to gather package updates."
-            )
-        else:
-            usr.update_launchpad_keyring_secret(
-                GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, lp_key_data
-            )
 
         if self._is_primary:
             if not node.setup_primary_node(
@@ -251,7 +277,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._node_id,
                 self._num_workers,
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
-                will_publish,
+                self._is_publishing_active,
                 self._controller_port,
                 primary_ip,
             ):
@@ -337,9 +363,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
         self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user files.")
         if not usr.setup_git_ubuntu_user_files(
-            GIT_UBUNTU_SYSTEM_USER_USERNAME,
-            GIT_UBUNTU_USER_HOME_DIR,
-            GIT_UBUNTU_SOURCE_URL,
+            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR
         ):
             self.unit.status = ops.BlockedStatus("Failed to set up git-ubuntu user files.")
             return
@@ -366,7 +390,18 @@ class GitUbuntuCharm(ops.CharmBase):
             or not self._update_lpuser_config()
             or not self._update_git_ubuntu_snap()
             or not self._open_controller_port()
+            or not self._refresh_secret_keys()
         ):
+            return
+
+        # Refresh git-ubuntu source code
+        self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu source.")
+        if not usr.refresh_git_ubuntu_source(
+            GIT_UBUNTU_SYSTEM_USER_USERNAME,
+            GIT_UBUNTU_USER_HOME_DIR,
+            self._git_ubuntu_source_url,
+        ):
+            self.unit.status = ops.BlockedStatus("Failed to refresh git-ubuntu source.")
             return
 
         # Initialize or re-install git-ubuntu services as needed.

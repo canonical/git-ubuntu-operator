@@ -66,34 +66,6 @@ def _mkdir_for_user_with_error_checking(
     return False
 
 
-def _clone_git_ubuntu_source(cloning_user: str, parent_directory: str, source_url: str) -> bool:
-    """Clone the git-ubuntu git repo to a given directory.
-
-    Args:
-        cloning_user: The user to run git clone as.
-        parent_directory: The directory to clone the repo into.
-        source_url: git-ubuntu's git repo url.
-
-    Returns:
-        True if the clone succeeded, False otherwise.
-    """
-    directory_path = pathops.LocalPath(parent_directory)
-    if not directory_path.is_dir():
-        logger.error(
-            "Failed to clone git-ubuntu sources: %s is not a valid directory.", parent_directory
-        )
-        return False
-
-    clone_dir = pathops.LocalPath(directory_path, "live-allowlist-denylist-source")
-
-    logger.info("Cloning git-ubuntu source to %s", clone_dir)
-    if not _run_command_as_user(cloning_user, f"git clone {source_url} {clone_dir}"):
-        logger.error("Failed to clone git-ubuntu source.")
-        return False
-
-    return True
-
-
 def _write_python_keyring_config_file(user: str, home_dir: str) -> bool:
     """Create a python_keyring/keyringrc.cfg file that enforces plaintext keyring usage.
 
@@ -143,25 +115,20 @@ def setup_git_ubuntu_user(user: str, home_dir: str) -> None:
     logger.info("Created user %s with home directory at %s.", new_user, home_dir)
 
 
-def setup_git_ubuntu_user_files(user: str, home_dir: str, git_ubuntu_source_url: str) -> bool:
+def setup_git_ubuntu_user_files(user: str, home_dir: str) -> bool:
     """Create necessary files for git-ubuntu user.
 
     Files include:
         The services folder
-        git-ubuntu source code
         python_keyring config
 
     Args:
         user: The user to install the files for.
         home_dir: The home directory for the user.
-        git_ubuntu_source_url: git-ubuntu's git repo url.
 
     Returns:
         True if the files were installed successfully, False otherwise.
     """
-    if not _clone_git_ubuntu_source(user, home_dir, git_ubuntu_source_url):
-        return False
-
     # Create the services folder if it does not yet exist
     services_dir = pathops.LocalPath(home_dir, "services")
 
@@ -169,6 +136,50 @@ def setup_git_ubuntu_user_files(user: str, home_dir: str, git_ubuntu_source_url:
         return False
 
     return _write_python_keyring_config_file(user, home_dir)
+
+
+def refresh_git_ubuntu_source(user: str, home_dir: str, source_url: str) -> bool:
+    """Clone or update the git-ubuntu git repo in the home directory.
+
+    Args:
+        user: The user to run git clone as.
+        home_dir: The home directory for the user.
+        source_url: git-ubuntu's git repo url.
+
+    Returns:
+        True if the clone succeeded, False otherwise.
+    """
+    directory_path = pathops.LocalPath(home_dir)
+    if not directory_path.is_dir():
+        logger.error("Failed to clone git-ubuntu sources: %s is not a valid directory.", home_dir)
+        return False
+
+    clone_dir = pathops.LocalPath(directory_path, "live-allowlist-denylist-source")
+
+    if clone_dir.is_dir():
+        logger.info("Updating existing git-ubuntu source in %s", clone_dir)
+
+        # Update origin to the current source url
+        if not _run_command_as_user(
+            user, f"git -C {clone_dir.as_posix()} remote set-url origin {source_url}"
+        ):
+            logger.error("Failed to update git-ubuntu source origin.")
+            return False
+
+        # Run git pull to get up to date
+        if not _run_command_as_user(user, f"git -C {clone_dir.as_posix()} pull"):
+            logger.error("Failed to update existing git-ubuntu source.")
+            return False
+
+        return True
+
+    # Clone the repository
+    logger.info("Cloning git-ubuntu source to %s", clone_dir)
+    if not _run_command_as_user(user, f"git clone {source_url} {clone_dir}"):
+        logger.error("Failed to clone git-ubuntu source.")
+        return False
+
+    return True
 
 
 def update_ssh_private_key(user: str, home_dir: str, ssh_key_data: str) -> bool:

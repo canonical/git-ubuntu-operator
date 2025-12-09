@@ -51,9 +51,7 @@ def test_install_success(
     mock_apt_update.assert_called()
     mock_add_package.assert_has_calls([call("git"), call("sqlite3")])
     mock_setup_git_ubuntu_user.assert_called_once_with("git-ubuntu", "/var/local/git-ubuntu")
-    mock_setup_git_ubuntu_user_files.assert_called_once_with(
-        "git-ubuntu", "/var/local/git-ubuntu", "https://git.launchpad.net/git-ubuntu"
-    )
+    mock_setup_git_ubuntu_user_files.assert_called_once_with("git-ubuntu", "/var/local/git-ubuntu")
     mock_set_snap_homedirs.assert_called_once_with("/var/local/git-ubuntu")
     mock_git_ubuntu_add_debian_archive_keyring.assert_called_once()
 

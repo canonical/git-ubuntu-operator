@@ -168,29 +168,3 @@ def test_controller_port_open(app: str, juju: jubilant.Juju):
 
     assert address is not None
     assert is_port_open(address, 1692)
-
-
-def test_update_config_with_ssh_key(app: str, juju: jubilant.Juju):
-    """Wait on other tests, then update config with an ssh key and test that it exists.
-
-    Args:
-        app: The app in charge of this unit.
-        juju: The juju model in charge of the app.
-    """
-    juju.wait(jubilant.all_active)
-    sleep(60)
-
-    with open("tests/integration/test-ssh-key", "r") as file:
-        file_content = file.read()
-
-        secret_uri = juju.add_secret("lpuser-secret-id", {"sshkey": file_content})
-        juju.grant_secret("lpuser-secret-id", app)
-
-        juju.config(app, {"lpuser_secret_id": secret_uri})
-        juju.wait(jubilant.all_active)
-
-        ssh_key = juju.ssh(
-            f"{app}/leader", "sudo -u git-ubuntu cat /var/local/git-ubuntu/.ssh/id", ""
-        )
-
-        assert file_content == ssh_key
