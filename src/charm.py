@@ -248,6 +248,24 @@ class GitUbuntuCharm(ops.CharmBase):
 
         return True
 
+    def _refresh_git_ubuntu_source(self) -> bool:
+        """Refresh the git-ubuntu source code from the configured URL.
+
+        Returns:
+            True if the source was refreshed successfully, False otherwise.
+        """
+        self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu source.")
+
+        if not usr.refresh_git_ubuntu_source(
+            GIT_UBUNTU_SYSTEM_USER_USERNAME,
+            GIT_UBUNTU_USER_HOME_DIR,
+            self._git_ubuntu_source_url,
+        ):
+            self.unit.status = ops.BlockedStatus("Failed to refresh git-ubuntu source.")
+            return False
+
+        return True
+
     def _refresh_importer_node(self) -> None:
         """Remove old and install new git-ubuntu services."""
         self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu services.")
@@ -383,29 +401,21 @@ class GitUbuntuCharm(ops.CharmBase):
         self.unit.status = ops.ActiveStatus("Install complete.")
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
-        """Handle updates to config items."""
-        # Update user's git and lpuser config, and git-ubuntu snap
+        """Handle updates to config items.
+
+        Update user settings, git config, the git-ubuntu snap and source, open ports, and keys.
+        If everything is successful, refresh git-ubuntu services.
+        """
         if (
-            not self._update_git_user_config()
-            or not self._update_lpuser_config()
-            or not self._update_git_ubuntu_snap()
-            or not self._open_controller_port()
-            or not self._refresh_secret_keys()
+            self._update_git_user_config()
+            and self._update_lpuser_config()
+            and self._update_git_ubuntu_snap()
+            and self._open_controller_port()
+            and self._refresh_secret_keys()
+            and self._refresh_git_ubuntu_source()
         ):
-            return
-
-        # Refresh git-ubuntu source code
-        self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu source.")
-        if not usr.refresh_git_ubuntu_source(
-            GIT_UBUNTU_SYSTEM_USER_USERNAME,
-            GIT_UBUNTU_USER_HOME_DIR,
-            self._git_ubuntu_source_url,
-        ):
-            self.unit.status = ops.BlockedStatus("Failed to refresh git-ubuntu source.")
-            return
-
-        # Initialize or re-install git-ubuntu services as needed.
-        self._refresh_importer_node()
+            # Initialize or re-install git-ubuntu services as needed.
+            self._refresh_importer_node()
 
     def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
         """Refresh services and update peer data when the unit is elected as leader."""
