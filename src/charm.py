@@ -99,10 +99,10 @@ class GitUbuntuCharm(ops.CharmBase):
 
     @property
     def _lpuser_secret(self) -> ops.model.Secret | None:
-        secret_id: str|None = None
+        secret_id: str = ""
 
         try:
-            secret_id = self.config["lpuser_secret_id"]
+            secret_id = str(self.config["lpuser_secret_id"])
         except KeyError:
             logger.warning("lpuser_secret_id config not available, unable to extract keys.")
             return None
