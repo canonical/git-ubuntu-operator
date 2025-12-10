@@ -157,7 +157,7 @@ def refresh_git_ubuntu_source(user: str, home_dir: str, source_url: str) -> bool
     clone_dir = pathops.LocalPath(directory_path, "live-allowlist-denylist-source")
 
     if clone_dir.is_dir():
-        logger.info("Updating existing git-ubuntu source in %s", clone_dir)
+        logger.info("Updating existing git-ubuntu source in %s", clone_dir.as_posix())
 
         # Update origin to the current source url
         if not _run_command_as_user(
@@ -174,8 +174,8 @@ def refresh_git_ubuntu_source(user: str, home_dir: str, source_url: str) -> bool
         return True
 
     # Clone the repository
-    logger.info("Cloning git-ubuntu source to %s", clone_dir)
-    if not _run_command_as_user(user, f"git clone {source_url} {clone_dir}"):
+    logger.info("Cloning git-ubuntu source to %s", clone_dir.as_posix())
+    if not _run_command_as_user(user, f"git clone {source_url} {clone_dir.as_posix()}"):
         logger.error("Failed to clone git-ubuntu source.")
         return False
 
