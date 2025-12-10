@@ -98,32 +98,43 @@ class GitUbuntuCharm(ops.CharmBase):
         return 0
 
     @property
-    def _lpuser_ssh_key(self) -> str | None:
+    def _lpuser_secret(self) -> ops.model.Secret | None:
+        secret_id: str|None = None
+
         try:
-            secret_id = str(self.config["lpuser_secret_id"])
-            lpuser_secret = self.model.get_secret(id=secret_id)
-            ssh_key_data = lpuser_secret.get_content().get("sshkey")
+            secret_id = self.config["lpuser_secret_id"]
+        except KeyError:
+            logger.warning("lpuser_secret_id config not available, unable to extract keys.")
+            return None
 
-            if ssh_key_data is not None:
-                return str(ssh_key_data)
+        try:
+            return self.model.get_secret(id=secret_id)
+        except (ops.SecretNotFoundError, ops.model.ModelError):
+            logger.warning("Failed to get lpuser secret with id %s", secret_id)
 
-        except (KeyError, ops.SecretNotFoundError, ops.model.ModelError):
-            pass
+        return None
+
+    @property
+    def _lpuser_ssh_key(self) -> str | None:
+        secret = self._lpuser_secret
+
+        if secret is not None:
+            try:
+                return secret.get_content(refresh=True)["sshkey"]
+            except KeyError:
+                logger.warning("sshkey secret key not found in lpuser secret.")
 
         return None
 
     @property
     def _lpuser_lp_key(self) -> str | None:
-        try:
-            secret_id = str(self.config["lpuser_secret_id"])
-            lpuser_secret = self.model.get_secret(id=secret_id)
-            lp_key_data = lpuser_secret.get_content().get("lpkey")
+        secret = self._lpuser_secret
 
-            if lp_key_data is not None:
-                return str(lp_key_data)
-
-        except (KeyError, ops.SecretNotFoundError, ops.model.ModelError):
-            pass
+        if secret is not None:
+            try:
+                return secret.get_content(refresh=True)["lpkey"]
+            except KeyError:
+                logger.warning("lpkey secret key not found in lpuser secret.")
 
         return None
 
