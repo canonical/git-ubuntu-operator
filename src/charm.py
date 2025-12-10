@@ -98,32 +98,43 @@ class GitUbuntuCharm(ops.CharmBase):
         return 0
 
     @property
-    def _lpuser_ssh_key(self) -> str | None:
+    def _lpuser_secret(self) -> ops.model.Secret | None:
+        secret_id: str = ""
+
         try:
             secret_id = str(self.config["lpuser_secret_id"])
-            lpuser_secret = self.model.get_secret(id=secret_id)
-            ssh_key_data = lpuser_secret.get_content().get("sshkey")
+        except KeyError:
+            logger.warning("lpuser_secret_id config not available, unable to extract keys.")
+            return None
 
-            if ssh_key_data is not None:
-                return str(ssh_key_data)
+        try:
+            return self.model.get_secret(id=secret_id)
+        except (ops.SecretNotFoundError, ops.model.ModelError):
+            logger.warning("Failed to get lpuser secret with id %s", secret_id)
 
-        except (KeyError, ops.SecretNotFoundError, ops.model.ModelError):
-            pass
+        return None
+
+    @property
+    def _lpuser_ssh_key(self) -> str | None:
+        secret = self._lpuser_secret
+
+        if secret is not None:
+            try:
+                return secret.get_content(refresh=True)["sshkey"]
+            except KeyError:
+                logger.warning("sshkey secret key not found in lpuser secret.")
 
         return None
 
     @property
     def _lpuser_lp_key(self) -> str | None:
-        try:
-            secret_id = str(self.config["lpuser_secret_id"])
-            lpuser_secret = self.model.get_secret(id=secret_id)
-            lp_key_data = lpuser_secret.get_content().get("lpkey")
+        secret = self._lpuser_secret
 
-            if lp_key_data is not None:
-                return str(lp_key_data)
-
-        except (KeyError, ops.SecretNotFoundError, ops.model.ModelError):
-            pass
+        if secret is not None:
+            try:
+                return secret.get_content(refresh=True)["lpkey"]
+            except KeyError:
+                logger.warning("lpkey secret key not found in lpuser secret.")
 
         return None
 
@@ -244,6 +255,24 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus(
                 "Failed to update Launchpad keyring for git-ubuntu user."
             )
+            return False
+
+        return True
+
+    def _refresh_git_ubuntu_source(self) -> bool:
+        """Refresh the git-ubuntu source code from the configured URL.
+
+        Returns:
+            True if the source was refreshed successfully, False otherwise.
+        """
+        self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu source.")
+
+        if not usr.refresh_git_ubuntu_source(
+            GIT_UBUNTU_SYSTEM_USER_USERNAME,
+            GIT_UBUNTU_USER_HOME_DIR,
+            self._git_ubuntu_source_url,
+        ):
+            self.unit.status = ops.BlockedStatus("Failed to refresh git-ubuntu source.")
             return False
 
         return True
@@ -383,29 +412,21 @@ class GitUbuntuCharm(ops.CharmBase):
         self.unit.status = ops.ActiveStatus("Install complete.")
 
     def _on_config_changed(self, _: ops.ConfigChangedEvent) -> None:
-        """Handle updates to config items."""
-        # Update user's git and lpuser config, and git-ubuntu snap
+        """Handle updates to config items.
+
+        Update user settings, git config, the git-ubuntu snap and source, open ports, and keys.
+        If everything is successful, refresh git-ubuntu services.
+        """
         if (
-            not self._update_git_user_config()
-            or not self._update_lpuser_config()
-            or not self._update_git_ubuntu_snap()
-            or not self._open_controller_port()
-            or not self._refresh_secret_keys()
+            self._update_git_user_config()
+            and self._update_lpuser_config()
+            and self._update_git_ubuntu_snap()
+            and self._open_controller_port()
+            and self._refresh_secret_keys()
+            and self._refresh_git_ubuntu_source()
         ):
-            return
-
-        # Refresh git-ubuntu source code
-        self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu source.")
-        if not usr.refresh_git_ubuntu_source(
-            GIT_UBUNTU_SYSTEM_USER_USERNAME,
-            GIT_UBUNTU_USER_HOME_DIR,
-            self._git_ubuntu_source_url,
-        ):
-            self.unit.status = ops.BlockedStatus("Failed to refresh git-ubuntu source.")
-            return
-
-        # Initialize or re-install git-ubuntu services as needed.
-        self._refresh_importer_node()
+            # Initialize or re-install git-ubuntu services as needed.
+            self._refresh_importer_node()
 
     def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
         """Refresh services and update peer data when the unit is elected as leader."""
