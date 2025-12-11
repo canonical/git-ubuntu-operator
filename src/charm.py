@@ -13,11 +13,13 @@ https://juju.is/docs/sdk/create-a-minimal-kubernetes-charm
 """
 
 import logging
+import os
+import socket
 from pathlib import Path
-from socket import getfqdn
 
 import ops
 
+import environment as env
 import importer_node as node
 import launchpad as lp
 import package_installation as pkgs
@@ -33,7 +35,7 @@ GIT_UBUNTU_SYSTEM_USER_USERNAME = "git-ubuntu"
 GIT_UBUNTU_GIT_USER_NAME = "Ubuntu Git Importer"
 GIT_UBUNTU_GIT_EMAIL = "usd-importer-do-not-mail@canonical.com"
 GIT_UBUNTU_USER_HOME_DIR = "/var/local/git-ubuntu"
-GIT_UBUNTU_SOURCE_BASE_URL = "git.launchpad.net/git-ubuntu"
+GIT_UBUNTU_SOURCE_URL = "https://git.launchpad.net/git-ubuntu"
 GIT_UBUNTU_KEYRING_FOLDER = Path(__file__).parent.parent / "keyring"
 
 
@@ -139,20 +141,6 @@ class GitUbuntuCharm(ops.CharmBase):
         return None
 
     @property
-    def _git_ubuntu_source_url(self) -> str:
-        """Get the git-ubuntu source URL based on config.
-
-        If an SSH private key is provided, get a git+ssh URL, otherwise use https.
-
-        Returns:
-            The git-ubuntu source URL.
-        """
-        if self._lpuser_ssh_key is not None:
-            return f"git+ssh://{self._lp_username}@{GIT_UBUNTU_SOURCE_BASE_URL}"
-
-        return f"https://{GIT_UBUNTU_SOURCE_BASE_URL}"
-
-    @property
     def _git_ubuntu_primary_relation(self) -> ops.Relation | None:
         """Get the peer relation that contains the primary node IP.
 
@@ -195,7 +183,7 @@ class GitUbuntuCharm(ops.CharmBase):
         relation = self._git_ubuntu_primary_relation
 
         if relation:
-            new_primary_address = getfqdn()
+            new_primary_address = socket.gethostbyname(socket.gethostname())
             relation.data[self.app]["primary_address"] = new_primary_address
             logger.info("Updated primary node address to %s", new_primary_address)
             return True
@@ -267,12 +255,40 @@ class GitUbuntuCharm(ops.CharmBase):
         """
         self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu source.")
 
+        # Set https proxy environment variable if available.
+        https_proxy = env.get_juju_https_proxy_url()
+
+        if https_proxy != "":
+            logger.info("Using https proxy %s for git-ubuntu source refresh.", https_proxy)
+            os.environ["https_proxy"] = https_proxy
+
+        # Run clone or pull of git-ubuntu source.
         if not usr.refresh_git_ubuntu_source(
             GIT_UBUNTU_SYSTEM_USER_USERNAME,
             GIT_UBUNTU_USER_HOME_DIR,
-            self._git_ubuntu_source_url,
+            GIT_UBUNTU_SOURCE_URL,
         ):
             self.unit.status = ops.BlockedStatus("Failed to refresh git-ubuntu source.")
+            return False
+
+        return True
+
+    def _refresh_ssh_config(self) -> bool:
+        """Refresh the SSH config for the git-ubuntu user.
+
+        Returns:
+            True if the config was updated successfully, False otherwise.
+        """
+        self.unit.status = ops.MaintenanceStatus("Refreshing SSH config.")
+
+        if not usr.update_ssh_config(
+            GIT_UBUNTU_SYSTEM_USER_USERNAME,
+            GIT_UBUNTU_USER_HOME_DIR,
+            env.get_juju_http_proxy_url(),
+        ):
+            self.unit.status = ops.BlockedStatus(
+                "Failed to update SSH config for git-ubuntu user."
+            )
             return False
 
         return True
@@ -290,6 +306,8 @@ class GitUbuntuCharm(ops.CharmBase):
                 GIT_UBUNTU_USER_HOME_DIR,
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 self._controller_port,
+                env.get_juju_http_proxy_url(),
+                env.get_juju_https_proxy_url(),
             ):
                 self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
                 return
@@ -309,6 +327,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._is_publishing_active,
                 self._controller_port,
                 primary_ip,
+                env.get_juju_https_proxy_url(),
             ):
                 self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
                 return
@@ -423,6 +442,7 @@ class GitUbuntuCharm(ops.CharmBase):
             and self._update_git_ubuntu_snap()
             and self._open_controller_port()
             and self._refresh_secret_keys()
+            and self._refresh_ssh_config()
             and self._refresh_git_ubuntu_source()
         ):
             # Initialize or re-install git-ubuntu services as needed.
