@@ -199,10 +199,10 @@ def setup_poller_service(
 
     environment = "PYTHONUNBUFFERED=1"
 
-    if http_proxy:
+    if http_proxy != "":
         environment = f"http_proxy={http_proxy} " + environment
 
-    if https_proxy:
+    if https_proxy != "":
         environment = f"https_proxy={https_proxy} " + environment
 
     service_string = generate_systemd_service_string(
@@ -230,6 +230,7 @@ def setup_worker_service(
     push_to_lp: bool = True,
     broker_ip: str = "127.0.0.1",
     broker_port: int = 1692,
+    lp_credentials_filename: str = "",
     https_proxy: str = "",
 ) -> bool:
     """Set up worker systemd file with designated worker name.
@@ -242,6 +243,7 @@ def setup_worker_service(
         push_to_lp: True if publishing repositories to Launchpad.
         broker_ip: The IP address of the broker process' node.
         broker_port: The network port that the broker provides tasks on.
+        lp_credentials_filename: The filename for specific Launchpad credentials if needed.
         https_proxy: Optional HTTPS proxy url.
 
     Returns:
@@ -255,7 +257,10 @@ def setup_worker_service(
 
     environment = "PYTHONUNBUFFERED=1"
 
-    if https_proxy:
+    if lp_credentials_filename != "":
+        environment = f"LP_CREDENTIALS_FILE={lp_credentials_filename} " + environment
+
+    if https_proxy != "":
         environment = f"https_proxy={https_proxy} " + environment
 
     service_string = generate_systemd_service_string(

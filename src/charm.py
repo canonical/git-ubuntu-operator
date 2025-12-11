@@ -325,6 +325,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._is_publishing_active,
                 self._controller_port,
                 primary_ip,
+                Path(GIT_UBUNTU_USER_HOME_DIR, ".config/lp-credentials.oauth").as_posix(),
                 env.get_juju_https_proxy_url(),
             ):
                 self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")

@@ -21,6 +21,7 @@ def setup_secondary_node(
     push_to_lp: bool,
     primary_port: int,
     primary_ip: str,
+    lp_credentials_filename: str = "",
     https_proxy: str = "",
 ) -> bool:
     """Set up necessary services for a worker-only git-ubuntu importer node.
@@ -33,6 +34,7 @@ def setup_secondary_node(
         push_to_lp: True if publishing repositories to Launchpad.
         primary_port: The network port used for worker assignments.
         primary_ip: The IP or network location of the primary node.
+        lp_credentials_filename: The filename for specific Launchpad credentials if needed.
         https_proxy: URL for the environment's https proxy if required.
 
     Returns:
@@ -50,6 +52,7 @@ def setup_secondary_node(
             push_to_lp,
             primary_ip,
             primary_port,
+            lp_credentials_filename,
             https_proxy,
         ):
             logger.error("Failed to setup worker %s service.", worker_name)
