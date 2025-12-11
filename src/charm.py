@@ -409,11 +409,11 @@ class GitUbuntuCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user.")
         usr.setup_git_ubuntu_user(GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR)
 
-        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user files.")
-        if not usr.setup_git_ubuntu_user_files(
+        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user services directory.")
+        if not usr.setup_git_ubuntu_user_services_dir(
             GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR
         ):
-            self.unit.status = ops.BlockedStatus("Failed to set up git-ubuntu user files.")
+            self.unit.status = ops.BlockedStatus("Failed to set up git-ubuntu services directory.")
             return
 
         if not usr.set_snap_homedirs(GIT_UBUNTU_USER_HOME_DIR):
