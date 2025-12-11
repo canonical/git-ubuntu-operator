@@ -178,7 +178,8 @@ def setup_poller_service(
     user: str,
     group: str,
     denylist: str,
-    proxy: str = "",
+    http_proxy: str = "",
+    https_proxy: str = "",
 ) -> bool:
     """Set up poller systemd service file.
 
@@ -187,7 +188,8 @@ def setup_poller_service(
         user: The user to run the service as.
         group: The permissions group to run the service as.
         denylist: The location of the package denylist.
-        proxy: Optional proxy url.
+        http_proxy: Optional HTTP proxy url.
+        https_proxy: Optional HTTPS proxy url.
 
     Returns:
         True if setup succeeded, False otherwise.
@@ -197,8 +199,11 @@ def setup_poller_service(
 
     environment = "PYTHONUNBUFFERED=1"
 
-    if proxy:
-        environment = f"http_proxy={proxy} " + environment
+    if http_proxy:
+        environment = f"http_proxy={http_proxy} " + environment
+
+    if https_proxy:
+        environment = f"https_proxy={https_proxy} " + environment
 
     service_string = generate_systemd_service_string(
         "git-ubuntu importer service poller",
@@ -225,6 +230,7 @@ def setup_worker_service(
     push_to_lp: bool = True,
     broker_ip: str = "127.0.0.1",
     broker_port: int = 1692,
+    https_proxy: str = "",
 ) -> bool:
     """Set up worker systemd file with designated worker name.
 
@@ -236,6 +242,7 @@ def setup_worker_service(
         push_to_lp: True if publishing repositories to Launchpad.
         broker_ip: The IP address of the broker process' node.
         broker_port: The network port that the broker provides tasks on.
+        https_proxy: Optional HTTPS proxy url.
 
     Returns:
         True if setup succeeded, False otherwise.
@@ -245,6 +252,11 @@ def setup_worker_service(
     publish_arg = " --no-push" if not push_to_lp else ""
     broker_url = f"tcp://{broker_ip}:{broker_port}"
     exec_start = f"/snap/bin/git-ubuntu importer-service-worker{publish_arg} %i {broker_url}"
+
+    environment = "PYTHONUNBUFFERED=1"
+
+    if https_proxy:
+        environment = f"https_proxy={https_proxy} " + environment
 
     service_string = generate_systemd_service_string(
         "git-ubuntu importer service worker",
@@ -258,7 +270,7 @@ def setup_worker_service(
         timeout_abort_sec=600,
         watchdog_signal="SIGINT",
         private_tmp=True,
-        environment="PYTHONUNBUFFERED=1",
+        environment=environment,
         wanted_by="multi-user.target",
     )
 

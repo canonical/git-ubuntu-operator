@@ -517,12 +517,51 @@ def test_git_ubuntu_poller_setup_success(mock_create_file):
 
 
 @patch("git_ubuntu.create_systemd_service_file")
-def test_git_ubuntu_poller_setup_with_proxy(mock_create_file):
-    """Test GitUbuntuPoller setup with proxy configuration."""
+def test_git_ubuntu_poller_setup_with_http_proxy(mock_create_file):
+    """Test GitUbuntuPoller setup with http proxy configuration."""
     mock_create_file.return_value = True
 
     result = setup_poller_service(
-        "test_folder", "ubuntu", "testgroup", "denylist.txt", proxy="http://proxy.example.com:8080"
+        "test_folder",
+        "ubuntu",
+        "testgroup",
+        "denylist.txt",
+        http_proxy="http://proxy.example.com:8080",
+    )
+
+    assert result is True
+    mock_create_file.assert_called_once()
+
+
+@patch("git_ubuntu.create_systemd_service_file")
+def test_git_ubuntu_poller_setup_with_https_proxy(mock_create_file):
+    """Test GitUbuntuPoller setup with https proxy configuration."""
+    mock_create_file.return_value = True
+
+    result = setup_poller_service(
+        "test_folder",
+        "ubuntu",
+        "testgroup",
+        "denylist.txt",
+        https_proxy="http://proxy.example.com:8080",
+    )
+
+    assert result is True
+    mock_create_file.assert_called_once()
+
+
+@patch("git_ubuntu.create_systemd_service_file")
+def test_git_ubuntu_poller_setup_with_full_proxy(mock_create_file):
+    """Test GitUbuntuPoller setup with http and https proxy configuration."""
+    mock_create_file.return_value = True
+
+    result = setup_poller_service(
+        "test_folder",
+        "ubuntu",
+        "testgroup",
+        "denylist.txt",
+        http_proxy="http://proxy2.example.com:8080",
+        https_proxy="http://proxy.example.com:8080",
     )
 
     assert result is True
@@ -562,6 +601,25 @@ def test_git_ubuntu_worker_setup_custom_params(mock_create_file):
         worker_name="1_2",
         broker_ip="192.168.1.100",
         broker_port=9000,
+    )
+
+    assert result is True
+    mock_create_file.assert_called_once()
+
+
+@patch("git_ubuntu.create_systemd_service_file")
+def test_git_ubuntu_worker_setup_https_proxy(mock_create_file):
+    """Test GitUbuntuWorker setup with custom parameters and https proxy."""
+    mock_create_file.return_value = True
+
+    result = setup_worker_service(
+        "test_folder",
+        "ubuntu",
+        "testgroup",
+        worker_name="1_2",
+        broker_ip="192.168.1.100",
+        broker_port=9000,
+        https_proxy="http://proxy.example.com:8080",
     )
 
     assert result is True
