@@ -273,6 +273,26 @@ class GitUbuntuCharm(ops.CharmBase):
 
         return True
 
+    def _refresh_ssh_config(self) -> bool:
+        """Refresh the SSH config for the git-ubuntu user.
+
+        Returns:
+            True if the config was updated successfully, False otherwise.
+        """
+        self.unit.status = ops.MaintenanceStatus("Refreshing SSH config.")
+
+        if not usr.update_ssh_config(
+            GIT_UBUNTU_SYSTEM_USER_USERNAME,
+            GIT_UBUNTU_USER_HOME_DIR,
+            env.get_juju_http_proxy_url(),
+        ):
+            self.unit.status = ops.BlockedStatus(
+                "Failed to update SSH config for git-ubuntu user."
+            )
+            return False
+
+        return True
+
     def _refresh_importer_node(self) -> None:
         """Remove old and install new git-ubuntu services."""
         self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu services.")
@@ -422,6 +442,7 @@ class GitUbuntuCharm(ops.CharmBase):
             and self._update_git_ubuntu_snap()
             and self._open_controller_port()
             and self._refresh_secret_keys()
+            and self._refresh_ssh_config()
             and self._refresh_git_ubuntu_source()
         ):
             # Initialize or re-install git-ubuntu services as needed.

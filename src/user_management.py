@@ -258,6 +258,61 @@ def update_launchpad_keyring_secret(user: str, home_dir: str, lp_key_data: str) 
     return key_success
 
 
+def update_ssh_config(user: str, home_dir: str, http_proxy: str = "") -> bool:
+    """Create or refresh the .ssh/config file for git.launchpad.net handling.
+
+    Args:
+        user: The git-ubuntu user.
+        home_dir: The home directory for the user.
+        http_proxy: The http proxy URL if required.
+
+    Returns:
+        True if directory and file creation succeeded, False otherwise.
+    """
+    ssh_config_file = pathops.LocalPath(home_dir, ".ssh/config")
+
+    parent_dir = ssh_config_file.parent
+
+    if not _mkdir_for_user_with_error_checking(parent_dir, user, 0o700):
+        return False
+
+    config_success = False
+
+    ssh_config_content: str = (
+        "Host git.launchpad.net\n"
+        + "  HostName git.launchpad.net\n"
+        + "  Port 22\n"
+        + "  IdentityFile ~/.ssh/id\n"
+    )
+
+    # Use socat to proxy ssh data if needed.
+    if http_proxy != "":
+        proxy_base_url = http_proxy.replace("http://", "").split(":")[0]
+        proxy_port = (
+            http_proxy.replace("http://", "").split(":")[1] if ":" in http_proxy else "3128"
+        )
+        ssh_config_content += (
+            "  ProxyCommand /usr/bin/socat - "
+            + f"PROXY:{proxy_base_url}:%h:%p,proxyport={proxy_port}\n"
+        )
+
+    try:
+        ssh_config_file.write_text(
+            ssh_config_content,
+            mode=0o664,
+            user=user,
+            group=user,
+        )
+        config_success = True
+    except (FileNotFoundError, NotADirectoryError) as e:
+        logger.error("Failed to create ssh config due to directory issues: %s", str(e))
+    except LookupError as e:
+        logger.error("Failed to create ssh config due to issues with root user: %s", str(e))
+    except PermissionError as e:
+        logger.error("Failed to create ssh config due to permission issues: %s", str(e))
+    return config_success
+
+
 def set_snap_homedirs(home_dir: str) -> bool:
     """Allow snaps to run for a user with a given home directory.
 
