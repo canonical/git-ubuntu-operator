@@ -59,6 +59,7 @@ def setup_primary_node(
     git_ubuntu_user_home: str,
     system_user: str,
     primary_port: int,
+    proxy: str = "",
 ) -> bool:
     """Set up poller and broker services to create a primary git-ubuntu importer node.
 
@@ -66,6 +67,7 @@ def setup_primary_node(
         git_ubuntu_user_home: The home directory of the git-ubuntu user.
         system_user: The user + group to run the services as.
         primary_port: The network port used for worker assignments.
+        proxy: URL for the environment's http proxy if required.
 
     Returns:
         True if installation succeeded, False otherwise.
@@ -93,6 +95,7 @@ def setup_primary_node(
         system_user,
         system_user,
         denylist.as_posix(),
+        proxy,
     ):
         logger.error("Failed to setup poller service.")
         return False
