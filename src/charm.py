@@ -18,6 +18,7 @@ from socket import getfqdn
 
 import ops
 
+import environment as env
 import importer_node as node
 import launchpad as lp
 import package_installation as pkgs
@@ -290,6 +291,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 GIT_UBUNTU_USER_HOME_DIR,
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 self._controller_port,
+                env.get_juju_http_proxy_url(),
             ):
                 self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
                 return
