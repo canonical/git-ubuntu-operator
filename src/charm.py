@@ -13,6 +13,7 @@ https://juju.is/docs/sdk/create-a-minimal-kubernetes-charm
 """
 
 import logging
+import os
 from pathlib import Path
 from socket import getfqdn
 
@@ -34,7 +35,7 @@ GIT_UBUNTU_SYSTEM_USER_USERNAME = "git-ubuntu"
 GIT_UBUNTU_GIT_USER_NAME = "Ubuntu Git Importer"
 GIT_UBUNTU_GIT_EMAIL = "usd-importer-do-not-mail@canonical.com"
 GIT_UBUNTU_USER_HOME_DIR = "/var/local/git-ubuntu"
-GIT_UBUNTU_SOURCE_BASE_URL = "git.launchpad.net/git-ubuntu"
+GIT_UBUNTU_SOURCE_URL = "https://git.launchpad.net/git-ubuntu"
 GIT_UBUNTU_KEYRING_FOLDER = Path(__file__).parent.parent / "keyring"
 
 
@@ -138,20 +139,6 @@ class GitUbuntuCharm(ops.CharmBase):
                 logger.warning("lpkey secret key not found in lpuser secret.")
 
         return None
-
-    @property
-    def _git_ubuntu_source_url(self) -> str:
-        """Get the git-ubuntu source URL based on config.
-
-        If an SSH private key is provided, get a git+ssh URL, otherwise use https.
-
-        Returns:
-            The git-ubuntu source URL.
-        """
-        if self._lpuser_ssh_key is not None:
-            return f"git+ssh://{self._lp_username}@{GIT_UBUNTU_SOURCE_BASE_URL}"
-
-        return f"https://{GIT_UBUNTU_SOURCE_BASE_URL}"
 
     @property
     def _git_ubuntu_primary_relation(self) -> ops.Relation | None:
@@ -268,10 +255,18 @@ class GitUbuntuCharm(ops.CharmBase):
         """
         self.unit.status = ops.MaintenanceStatus("Refreshing git-ubuntu source.")
 
+        # Set https proxy environment variable if available.
+        https_proxy = env.get_juju_https_proxy_url()
+
+        if https_proxy != "":
+            logger.info("Using https proxy %s for git-ubuntu source refresh.", https_proxy)
+            os.environ["https_proxy"] = https_proxy
+
+        # Run clone or pull of git-ubuntu source.
         if not usr.refresh_git_ubuntu_source(
             GIT_UBUNTU_SYSTEM_USER_USERNAME,
             GIT_UBUNTU_USER_HOME_DIR,
-            self._git_ubuntu_source_url,
+            GIT_UBUNTU_SOURCE_URL,
         ):
             self.unit.status = ops.BlockedStatus("Failed to refresh git-ubuntu source.")
             return False
