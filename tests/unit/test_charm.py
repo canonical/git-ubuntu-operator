@@ -29,13 +29,13 @@ def base_state(ctx):
 @patch("charmlibs.apt.update")
 @patch("charmlibs.apt.add_package")
 @patch("charm.usr.setup_git_ubuntu_user")
-@patch("charm.usr.setup_git_ubuntu_user_files")
+@patch("charm.usr.setup_git_ubuntu_user_services_dir")
 @patch("charm.usr.set_snap_homedirs")
 @patch("charm.pkgs.git_ubuntu_add_debian_archive_keyring")
 def test_install_success(
     mock_git_ubuntu_add_debian_archive_keyring,
     mock_set_snap_homedirs,
-    mock_setup_git_ubuntu_user_files,
+    mock_setup_git_ubuntu_user_services_dir,
     mock_setup_git_ubuntu_user,
     mock_add_package,
     mock_apt_update,
@@ -43,7 +43,7 @@ def test_install_success(
     base_state,
 ):
     """Test successful installation with valid config."""
-    mock_setup_git_ubuntu_user_files.return_value = True
+    mock_setup_git_ubuntu_user_services_dir.return_value = True
     out = ctx.run(ctx.on.install(), base_state)
 
     assert out.unit_status == ActiveStatus("Install complete.")
@@ -51,7 +51,9 @@ def test_install_success(
     mock_apt_update.assert_called()
     mock_add_package.assert_has_calls([call("git"), call("sqlite3")])
     mock_setup_git_ubuntu_user.assert_called_once_with("git-ubuntu", "/var/local/git-ubuntu")
-    mock_setup_git_ubuntu_user_files.assert_called_once_with("git-ubuntu", "/var/local/git-ubuntu")
+    mock_setup_git_ubuntu_user_services_dir.assert_called_once_with(
+        "git-ubuntu", "/var/local/git-ubuntu"
+    )
     mock_set_snap_homedirs.assert_called_once_with("/var/local/git-ubuntu")
     mock_git_ubuntu_add_debian_archive_keyring.assert_called_once()
 
