@@ -14,8 +14,8 @@ https://juju.is/docs/sdk/create-a-minimal-kubernetes-charm
 
 import logging
 import os
-from pathlib import Path
 import socket
+from pathlib import Path
 
 import ops
 
