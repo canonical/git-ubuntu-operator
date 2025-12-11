@@ -175,22 +175,22 @@ def update_ssh_private_key(user: str, home_dir: str, ssh_key_data: str) -> bool:
     return key_success
 
 
-def update_launchpad_keyring_secret(user: str, home_dir: str, lp_key_data: str) -> bool:
-    """Create or refresh the python keyring file for launchpad access.
+def update_launchpad_credentials_secret(user: str, home_dir: str, lp_key_data: str) -> bool:
+    """Create or refresh the credentials file for launchpad access.
 
     Args:
         user: The git-ubuntu user.
         home_dir: The home directory for the user.
-        lp_key_data: The private keyring data.
+        lp_key_data: The private credential data.
 
     Returns:
         True if directory and file creation succeeded, False otherwise.
     """
-    lp_key_file = pathops.LocalPath(home_dir, ".local/share/python_keyring/keyring_pass.cfg")
+    lp_key_file = pathops.LocalPath(home_dir, ".config/lp-credentials.oauth")
 
     parent_dir = lp_key_file.parent
 
-    if not _mkdir_for_user_with_error_checking(parent_dir, user):
+    if not _mkdir_for_user_with_error_checking(parent_dir, user, 0o700):
         return False
 
     key_success = False
@@ -204,12 +204,13 @@ def update_launchpad_keyring_secret(user: str, home_dir: str, lp_key_data: str) 
         )
         key_success = True
     except (FileNotFoundError, NotADirectoryError) as e:
-        logger.error("Failed to create lp key entry due to directory issues: %s", str(e))
+        logger.error("Failed to create lp credentials entry due to directory issues: %s", str(e))
     except LookupError as e:
-        logger.error("Failed to create lp key entry due to issues with root user: %s", str(e))
+        logger.error(
+            "Failed to create lp credentials entry due to issues with root user: %s", str(e)
+        )
     except PermissionError as e:
-        logger.error("Failed to create lp key entry due to permission issues: %s", str(e))
-
+        logger.error("Failed to create lp credentials entry due to permission issues: %s", str(e))
     return key_success
 
 

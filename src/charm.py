@@ -234,14 +234,12 @@ class GitUbuntuCharm(ops.CharmBase):
                 return False
 
         if lp_key_data is None:
-            logger.warning(
-                "Launchpad keyring entry unavailable, unable to gather package updates."
-            )
-        elif not usr.update_launchpad_keyring_secret(
+            logger.warning("Launchpad credentials unavailable, unable to gather package updates.")
+        elif not usr.update_launchpad_credentials_secret(
             GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, lp_key_data
         ):
             self.unit.status = ops.BlockedStatus(
-                "Failed to update Launchpad keyring for git-ubuntu user."
+                "Failed to update Launchpad credentials for git-ubuntu user."
             )
             return False
 
