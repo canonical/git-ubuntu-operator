@@ -15,7 +15,7 @@ https://juju.is/docs/sdk/create-a-minimal-kubernetes-charm
 import logging
 import os
 from pathlib import Path
-from socket import getfqdn
+import socket
 
 import ops
 
@@ -183,7 +183,7 @@ class GitUbuntuCharm(ops.CharmBase):
         relation = self._git_ubuntu_primary_relation
 
         if relation:
-            new_primary_address = getfqdn()
+            new_primary_address = socket.gethostbyname(socket.gethostname())
             relation.data[self.app]["primary_address"] = new_primary_address
             logger.info("Updated primary node address to %s", new_primary_address)
             return True
