@@ -292,6 +292,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 self._controller_port,
                 env.get_juju_http_proxy_url(),
+                env.get_juju_https_proxy_url(),
             ):
                 self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
                 return
@@ -311,6 +312,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._is_publishing_active,
                 self._controller_port,
                 primary_ip,
+                env.get_juju_https_proxy_url(),
             ):
                 self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
                 return
