@@ -24,7 +24,7 @@ def test_service_status(app: str, juju: jubilant.Juju):
     """
     # Wait until machine is ready, then wait an extra 60 seconds for services to fully activate.
     juju.wait(jubilant.all_active)
-    sleep(60)
+    sleep(90)
 
     def get_services_dict(unit_name: str, juju: jubilant.Juju) -> dict[str, dict[str, bool | str]]:
         """Get a dictionary of running systemd services on the app's unit.
