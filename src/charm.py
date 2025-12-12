@@ -234,14 +234,12 @@ class GitUbuntuCharm(ops.CharmBase):
                 return False
 
         if lp_key_data is None:
-            logger.warning(
-                "Launchpad keyring entry unavailable, unable to gather package updates."
-            )
-        elif not usr.update_launchpad_keyring_secret(
+            logger.warning("Launchpad credentials unavailable, unable to gather package updates.")
+        elif not usr.update_launchpad_credentials_secret(
             GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR, lp_key_data
         ):
             self.unit.status = ops.BlockedStatus(
-                "Failed to update Launchpad keyring for git-ubuntu user."
+                "Failed to update Launchpad credentials for git-ubuntu user."
             )
             return False
 
@@ -327,6 +325,7 @@ class GitUbuntuCharm(ops.CharmBase):
                 self._is_publishing_active,
                 self._controller_port,
                 primary_ip,
+                Path(GIT_UBUNTU_USER_HOME_DIR, ".config/lp-credentials.oauth").as_posix(),
                 env.get_juju_https_proxy_url(),
             ):
                 self.unit.status = ops.BlockedStatus("Failed to install git-ubuntu services.")
@@ -409,11 +408,11 @@ class GitUbuntuCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user.")
         usr.setup_git_ubuntu_user(GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR)
 
-        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user files.")
-        if not usr.setup_git_ubuntu_user_files(
+        self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user services directory.")
+        if not usr.setup_git_ubuntu_user_services_dir(
             GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR
         ):
-            self.unit.status = ops.BlockedStatus("Failed to set up git-ubuntu user files.")
+            self.unit.status = ops.BlockedStatus("Failed to set up git-ubuntu services directory.")
             return
 
         if not usr.set_snap_homedirs(GIT_UBUNTU_USER_HOME_DIR):
