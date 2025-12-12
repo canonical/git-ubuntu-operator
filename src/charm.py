@@ -13,7 +13,6 @@ https://juju.is/docs/sdk/create-a-minimal-kubernetes-charm
 """
 
 import logging
-import os
 import socket
 from pathlib import Path
 
@@ -258,13 +257,13 @@ class GitUbuntuCharm(ops.CharmBase):
 
         if https_proxy != "":
             logger.info("Using https proxy %s for git-ubuntu source refresh.", https_proxy)
-            os.environ["https_proxy"] = https_proxy
 
         # Run clone or pull of git-ubuntu source.
         if not usr.refresh_git_ubuntu_source(
             GIT_UBUNTU_SYSTEM_USER_USERNAME,
             GIT_UBUNTU_USER_HOME_DIR,
             GIT_UBUNTU_SOURCE_URL,
+            https_proxy,
         ):
             self.unit.status = ops.BlockedStatus("Failed to refresh git-ubuntu source.")
             return False
