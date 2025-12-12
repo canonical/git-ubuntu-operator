@@ -48,6 +48,23 @@ def sqlite3_install() -> bool:
     return True
 
 
+def socat_install() -> bool:
+    """Install socat from apt.
+
+    Returns:
+        True if socat install succeeded, False otherwise.
+    """
+    try:
+        apt.update()
+        apt.add_package("socat")
+        logger.info("Installed socat package.")
+    except apt.PackageError as e:
+        logger.error("Failed to install socat from apt: %s", e)
+        return False
+
+    return True
+
+
 def git_ubuntu_snap_refresh(channel: str) -> bool:
     """Install or refresh the git-ubuntu snap with the given channel version.
 

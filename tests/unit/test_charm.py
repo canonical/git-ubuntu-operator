@@ -49,7 +49,7 @@ def test_install_success(
     assert out.unit_status == ActiveStatus("Install complete.")
 
     mock_apt_update.assert_called()
-    mock_add_package.assert_has_calls([call("git"), call("sqlite3")])
+    mock_add_package.assert_has_calls([call("git"), call("sqlite3"), call("socat")])
     mock_setup_git_ubuntu_user.assert_called_once_with("git-ubuntu", "/var/local/git-ubuntu")
     mock_setup_git_ubuntu_user_services_dir.assert_called_once_with(
         "git-ubuntu", "/var/local/git-ubuntu"
