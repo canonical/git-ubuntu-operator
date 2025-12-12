@@ -405,6 +405,12 @@ class GitUbuntuCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Failed to install sqlite3.")
             return
 
+        self.unit.status = ops.MaintenanceStatus("Installing socat.")
+
+        if not pkgs.socat_install():
+            self.unit.status = ops.BlockedStatus("Failed to install socat.")
+            return
+
         self.unit.status = ops.MaintenanceStatus("Setting up git-ubuntu user.")
         usr.setup_git_ubuntu_user(GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_USER_HOME_DIR)
 
