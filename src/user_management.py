@@ -93,13 +93,16 @@ def setup_git_ubuntu_user_services_dir(user: str, home_dir: str) -> bool:
     return _mkdir_for_user_with_error_checking(services_dir, user)
 
 
-def refresh_git_ubuntu_source(user: str, home_dir: str, source_url: str) -> bool:
+def refresh_git_ubuntu_source(
+    user: str, home_dir: str, source_url: str, https_proxy: str = ""
+) -> bool:
     """Clone or update the git-ubuntu git repo in the home directory.
 
     Args:
         user: The user to run git clone as.
         home_dir: The home directory for the user.
         source_url: git-ubuntu's git repo url.
+        https_proxy: The https proxy URL if required.
 
     Returns:
         True if the clone succeeded, False otherwise.
@@ -122,15 +125,23 @@ def refresh_git_ubuntu_source(user: str, home_dir: str, source_url: str) -> bool
             return False
 
         # Run git pull to get up to date
-        if not _run_command_as_user(user, f"git -C {clone_dir.as_posix()} pull"):
+        pull_command = f"git -C {clone_dir.as_posix()} pull"
+        if https_proxy != "":
+            pull_command = f"https_proxy={https_proxy} {pull_command}"
+
+        if not _run_command_as_user(user, pull_command):
             logger.error("Failed to update existing git-ubuntu source.")
             return False
 
         return True
 
     # Clone the repository
+    clone_command = f"git clone {source_url} {clone_dir.as_posix()}"
+    if https_proxy != "":
+        clone_command = f"https_proxy={https_proxy} {clone_command}"
+
     logger.info("Cloning git-ubuntu source to %s", clone_dir.as_posix())
-    if not _run_command_as_user(user, f"git clone {source_url} {clone_dir.as_posix()}"):
+    if not _run_command_as_user(user, clone_command):
         logger.error("Failed to clone git-ubuntu source.")
         return False
 
