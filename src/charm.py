@@ -318,8 +318,6 @@ class GitUbuntuCharm(ops.CharmBase):
 
             if not node.setup_secondary_node(
                 GIT_UBUNTU_USER_HOME_DIR,
-                self._node_id,
-                self._num_workers,
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 self._is_publishing_active,
                 self._controller_port,

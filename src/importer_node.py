@@ -15,8 +15,6 @@ logger = logging.getLogger(__name__)
 
 def setup_secondary_node(
     git_ubuntu_user_home: str,
-    node_id: int,
-    num_workers: int,
     system_user: str,
     push_to_lp: bool,
     primary_port: int,
@@ -28,8 +26,6 @@ def setup_secondary_node(
 
     Args:
         git_ubuntu_user_home: The home directory of the git-ubuntu user.
-        node_id: The unique ID of this node.
-        num_workers: The number of worker instances to set up.
         system_user: The user + group to run the services as.
         push_to_lp: True if publishing repositories to Launchpad.
         primary_port: The network port used for worker assignments.
@@ -40,23 +36,18 @@ def setup_secondary_node(
     Returns:
         True if installation succeeded, False otherwise.
     """
-    services_folder = pathops.LocalPath(git_ubuntu_user_home, "services")
-
-    for i in range(num_workers):
-        worker_name = f"{node_id}_{i}"
-        if not git_ubuntu.setup_worker_service(
-            services_folder.as_posix(),
-            system_user,
-            system_user,
-            worker_name,
-            push_to_lp,
-            primary_ip,
-            primary_port,
-            lp_credentials_filename,
-            https_proxy,
-        ):
-            logger.error("Failed to setup worker %s service.", worker_name)
-            return False
+    if not git_ubuntu.setup_worker_service(
+        git_ubuntu_user_home,
+        system_user,
+        system_user,
+        push_to_lp,
+        primary_ip,
+        primary_port,
+        lp_credentials_filename,
+        https_proxy,
+    ):
+        logger.error("Failed to setup worker service file.")
+        return False
 
     return True
 
