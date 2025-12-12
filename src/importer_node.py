@@ -71,11 +71,9 @@ def setup_primary_node(
     Returns:
         True if installation succeeded, False otherwise.
     """
-    services_folder = pathops.LocalPath(git_ubuntu_user_home, "services")
-
     # Setup broker service.
     if not git_ubuntu.setup_broker_service(
-        services_folder.as_posix(),
+        git_ubuntu_user_home,
         system_user,
         system_user,
         primary_port,
@@ -90,7 +88,7 @@ def setup_primary_node(
 
     # Setup poller service.
     if not git_ubuntu.setup_poller_service(
-        services_folder.as_posix(),
+        git_ubuntu_user_home,
         system_user,
         system_user,
         denylist.as_posix(),

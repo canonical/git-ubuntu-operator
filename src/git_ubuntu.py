@@ -139,7 +139,7 @@ def generate_systemd_service_string(
 
 
 def setup_broker_service(
-    local_folder: str,
+    home_dir: str,
     user: str,
     group: str,
     broker_port: int = 1692,
@@ -147,7 +147,7 @@ def setup_broker_service(
     """Set up broker systemd service file.
 
     Args:
-        local_folder: The local folder to store the service in.
+        home_dir: The home directory of the user.
         user: The user to run the service as.
         group: The permissions group to run the service as.
         broker_port: The network port to provide tasks to workers on.
@@ -170,11 +170,12 @@ def setup_broker_service(
         wanted_by="multi-user.target",
     )
 
-    return create_systemd_service_file(filename, local_folder, service_string)
+    services_folder = pathops.LocalPath(home_dir, "services")
+    return create_systemd_service_file(filename, services_folder.as_posix(), service_string)
 
 
 def setup_poller_service(
-    local_folder: str,
+    home_dir: str,
     user: str,
     group: str,
     denylist: str,
@@ -184,7 +185,7 @@ def setup_poller_service(
     """Set up poller systemd service file.
 
     Args:
-        local_folder: The local folder to store the service in.
+        home_dir: The home directory of the user.
         user: The user to run the service as.
         group: The permissions group to run the service as.
         denylist: The location of the package denylist.
@@ -219,7 +220,8 @@ def setup_poller_service(
         wanted_by="multi-user.target",
     )
 
-    return create_systemd_service_file(filename, local_folder, service_string)
+    services_folder = pathops.LocalPath(home_dir, "services")
+    return create_systemd_service_file(filename, services_folder.as_posix(), service_string)
 
 
 def setup_worker_service(
