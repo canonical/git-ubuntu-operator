@@ -478,7 +478,7 @@ def test_git_ubuntu_broker_setup_success(mock_create_file):
     """Test GitUbuntuBroker setup with default parameters."""
     mock_create_file.return_value = True
 
-    result = setup_broker_service("test_folder", "ubuntu", "testgroup")
+    result = setup_broker_service("test_home", "ubuntu", "testgroup")
 
     assert result is True
     mock_create_file.assert_called_once()
@@ -489,7 +489,7 @@ def test_git_ubuntu_broker_setup_custom_port(mock_create_file):
     """Test GitUbuntuBroker setup with custom broker port."""
     mock_create_file.return_value = True
 
-    result = setup_broker_service("test_folder", "ubuntu", "testgroup", broker_port=8080)
+    result = setup_broker_service("test_home", "ubuntu", "testgroup", broker_port=8080)
 
     assert result is True
     mock_create_file.assert_called_once()
@@ -500,7 +500,7 @@ def test_git_ubuntu_broker_setup_failure(mock_create_file):
     """Test GitUbuntuBroker setup when file creation fails."""
     mock_create_file.return_value = False
 
-    result = setup_broker_service("test_folder", "ubuntu", "testgroup")
+    result = setup_broker_service("test_home", "ubuntu", "testgroup")
 
     assert result is False
 
@@ -510,7 +510,7 @@ def test_git_ubuntu_poller_setup_success(mock_create_file):
     """Test GitUbuntuPoller setup with default parameters."""
     mock_create_file.return_value = True
 
-    result = setup_poller_service("test_folder", "ubuntu", "testgroup", "denylist.txt")
+    result = setup_poller_service("test_home", "ubuntu", "testgroup", "denylist.txt")
 
     assert result is True
     mock_create_file.assert_called_once()
@@ -522,7 +522,7 @@ def test_git_ubuntu_poller_setup_with_http_proxy(mock_create_file):
     mock_create_file.return_value = True
 
     result = setup_poller_service(
-        "test_folder",
+        "test_home",
         "ubuntu",
         "testgroup",
         "denylist.txt",
@@ -539,7 +539,7 @@ def test_git_ubuntu_poller_setup_with_https_proxy(mock_create_file):
     mock_create_file.return_value = True
 
     result = setup_poller_service(
-        "test_folder",
+        "test_home",
         "ubuntu",
         "testgroup",
         "denylist.txt",
@@ -556,7 +556,7 @@ def test_git_ubuntu_poller_setup_with_full_proxy(mock_create_file):
     mock_create_file.return_value = True
 
     result = setup_poller_service(
-        "test_folder",
+        "test_home",
         "ubuntu",
         "testgroup",
         "denylist.txt",
@@ -573,7 +573,7 @@ def test_git_ubuntu_poller_setup_failure(mock_create_file):
     """Test GitUbuntuPoller setup when file creation fails."""
     mock_create_file.return_value = False
 
-    result = setup_poller_service("test_folder", "ubuntu", "testgroup", "denylist.txt")
+    result = setup_poller_service("test_home", "ubuntu", "testgroup", "denylist.txt")
 
     assert result is False
 
@@ -583,7 +583,7 @@ def test_git_ubuntu_worker_setup_success(mock_create_file):
     """Test GitUbuntuWorker setup with default parameters."""
     mock_create_file.return_value = True
 
-    result = setup_worker_service("test_folder", "ubuntu", "testgroup")
+    result = setup_worker_service("test_home", "ubuntu", "testgroup")
 
     assert result is True
     mock_create_file.assert_called_once()
@@ -595,10 +595,9 @@ def test_git_ubuntu_worker_setup_custom_params(mock_create_file):
     mock_create_file.return_value = True
 
     result = setup_worker_service(
-        "test_folder",
+        "test_home",
         "ubuntu",
         "testgroup",
-        worker_name="1_2",
         broker_ip="192.168.1.100",
         broker_port=9000,
     )
@@ -613,10 +612,9 @@ def test_git_ubuntu_worker_setup_https_proxy(mock_create_file):
     mock_create_file.return_value = True
 
     result = setup_worker_service(
-        "test_folder",
+        "test_home",
         "ubuntu",
         "testgroup",
-        worker_name="1_2",
         broker_ip="192.168.1.100",
         broker_port=9000,
         https_proxy="http://proxy.example.com:8080",
@@ -631,6 +629,6 @@ def test_git_ubuntu_worker_setup_failure(mock_create_file):
     """Test GitUbuntuWorker setup when file creation fails."""
     mock_create_file.return_value = False
 
-    result = setup_worker_service("test_folder", "ubuntu", "testgroup")
+    result = setup_worker_service("test_home", "ubuntu", "testgroup")
 
     assert result is False

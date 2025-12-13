@@ -318,8 +318,6 @@ class GitUbuntuCharm(ops.CharmBase):
 
             if not node.setup_secondary_node(
                 GIT_UBUNTU_USER_HOME_DIR,
-                self._node_id,
-                self._num_workers,
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 self._is_publishing_active,
                 self._controller_port,
@@ -335,7 +333,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _start_services(self) -> None:
         """Start the services and note the result through status."""
-        if node.start(GIT_UBUNTU_USER_HOME_DIR):
+        if node.start(GIT_UBUNTU_USER_HOME_DIR, self._node_id, self._num_workers):
             node_type_str = "primary" if self._is_primary else "secondary"
             self.unit.status = ops.ActiveStatus(
                 f"Running git-ubuntu importer {node_type_str} node."

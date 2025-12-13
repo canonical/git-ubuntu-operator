@@ -16,11 +16,11 @@ def test_setup_secondary_node_success(mock_setup_worker):
     mock_setup_worker.return_value = True
 
     result = importer_node.setup_secondary_node(
-        "/var/local/git-ubuntu", 1, 2, "git-ubuntu", True, 1692, "192.168.1.1"
+        "/var/local/git-ubuntu", "git-ubuntu", True, 1692, "192.168.1.1"
     )
 
     assert result is True
-    assert mock_setup_worker.call_count == 2
+    assert mock_setup_worker.call_count == 1
 
 
 @patch("importer_node.git_ubuntu.setup_worker_service")
@@ -29,7 +29,7 @@ def test_setup_secondary_node_failure(mock_setup_worker):
     mock_setup_worker.return_value = False
 
     result = importer_node.setup_secondary_node(
-        "/var/local/git-ubuntu", 1, 1, "git-ubuntu", True, 1692, "192.168.1.1"
+        "/var/local/git-ubuntu", "git-ubuntu", True, 1692, "192.168.1.1"
     )
 
     assert result is False
@@ -90,10 +90,10 @@ def test_start_success(mock_start_services):
     """Test successful service start."""
     mock_start_services.return_value = True
 
-    result = importer_node.start("/var/local/git-ubuntu")
+    result = importer_node.start("/var/local/git-ubuntu", 1, 2)
 
     assert result is True
-    mock_start_services.assert_called_once_with("/var/local/git-ubuntu/services")
+    mock_start_services.assert_called_once_with("/var/local/git-ubuntu/services", 1, 2)
 
 
 @patch("importer_node.git_ubuntu.start_services")
@@ -101,7 +101,7 @@ def test_start_failure(mock_start_services):
     """Test service start failure."""
     mock_start_services.return_value = False
 
-    result = importer_node.start("/var/local/git-ubuntu")
+    result = importer_node.start("/var/local/git-ubuntu", 1, 2)
 
     assert result is False
 
