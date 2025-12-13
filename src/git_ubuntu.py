@@ -53,6 +53,34 @@ def _get_services_list(service_folder: str) -> list[str] | None:
     return service_list
 
 
+def _expand_service_list_for_workers(
+    base_service_list: list[str],
+    node_id: int,
+    num_workers: int,
+) -> list[str]:
+    """Expand the base service list to include worker instances.
+
+    Args:
+        base_service_list: The base list of service names.
+        node_id: The unique ID of this node.
+        num_workers: The number of worker instances to set up.
+
+    Returns:
+        The expanded list of service names including worker instances.
+    """
+    expanded_service_list = []
+
+    for service in base_service_list:
+        if "@.service" in service:
+            for worker_id in range(num_workers):
+                service_name = service.replace("@.service", f"@{node_id}-{worker_id}")
+                expanded_service_list.append(service_name)
+        else:
+            expanded_service_list.append(service)
+
+    return expanded_service_list
+
+
 def generate_systemd_service_string(
     description: str,
     service_user: str,
@@ -283,7 +311,7 @@ def setup_worker_service(
     return create_systemd_service_file(filename, services_folder.as_posix(), service_string)
 
 
-def start_services(service_folder: str) -> bool:
+def start_services(service_folder: str, node_id: int, num_workers: int) -> bool:
     """Start all git-ubuntu services and wait for startup to complete.
 
     Args:
@@ -296,6 +324,8 @@ def start_services(service_folder: str) -> bool:
 
     if service_list is None:
         return False
+
+    service_list = _expand_service_list_for_workers(service_list, node_id, num_workers)
 
     services_started = True
 
@@ -338,6 +368,10 @@ def stop_services(service_folder: str) -> bool:
     services_stopped = True
 
     for service in service_list:
+        # Glob worker services
+        if "@.service" in service:
+            service = f"'{service.replace('@.service', '@*')}'"
+
         if stop_service(service):
             logger.info("Stopped service %s", service)
         else:

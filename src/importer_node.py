@@ -101,18 +101,20 @@ def setup_primary_node(
     return True
 
 
-def start(git_ubuntu_user_home: str) -> bool:
+def start(git_ubuntu_user_home: str, node_id: int, num_workers: int) -> bool:
     """Start all git-ubuntu services and wait for their startups to complete.
 
     Args:
         git_ubuntu_user_home: The home directory of the git-ubuntu user.
+        node_id: The node ID of this node.
+        num_workers: The number of worker services to start if secondary.
 
     Returns:
         True if all services were started successfully, False otherwise.
     """
     services_folder = pathops.LocalPath(git_ubuntu_user_home, "services")
 
-    if not git_ubuntu.start_services(services_folder.as_posix()):
+    if not git_ubuntu.start_services(services_folder.as_posix(), node_id, num_workers):
         logger.error("Failed to start all services.")
         return False
 
