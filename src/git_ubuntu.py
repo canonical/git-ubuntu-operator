@@ -316,6 +316,8 @@ def start_services(service_folder: str, node_id: int, num_workers: int) -> bool:
 
     Args:
         service_folder: The name of the folder containing the service files.
+        node_id: The unique ID of this node.
+        num_workers: The number of worker instances to start if secondary.
 
     Returns:
         True if all services were started successfully, False otherwise.
