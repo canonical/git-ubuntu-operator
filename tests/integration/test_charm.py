@@ -137,6 +137,25 @@ def test_installed_dump_files(app: str, juju: jubilant.Juju):
     assert debian_keyring_status == "0"
 
 
+def test_git_ubuntu_source_denylist_exists(app: str, juju: jubilant.Juju):
+    """Test that the git-ubuntu source repo has been cloned and contains the denylist.
+
+    Args:
+        app: The app in charge of this unit.
+        juju: The juju model in charge of the app.
+    """
+    juju.wait(jubilant.all_active)
+
+    debian_keyring_status = juju.ssh(
+        f"{app}/leader",
+        "test -f "
+        + "/var/local/git-ubuntu/live-allowlist-denylist-source/gitubuntu/"
+        + "source-package-denylist.txt | echo $?",
+        "",
+    ).strip()
+    assert debian_keyring_status == "0"
+
+
 def test_controller_port_open(app: str, juju: jubilant.Juju):
     """Confirm that the git-ubuntu controller leader network port opens.
 
