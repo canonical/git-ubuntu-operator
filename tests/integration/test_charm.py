@@ -25,7 +25,7 @@ def test_installed_apps(app: str, juju: jubilant.Juju):
         app: The app in charge of this unit.
         juju: The juju model in charge of the app.
     """
-    wait_for_all_units_running(juju, app)
+    wait_for_all_units_running(app, juju)
 
     assert check_deb_installed(app, 0, juju, "git")
     assert check_deb_installed(app, 0, juju, "sqlite3")
@@ -48,7 +48,7 @@ def test_installed_dump_files(app: str, juju: jubilant.Juju):
         app: The app in charge of this unit.
         juju: The juju model in charge of the app.
     """
-    wait_for_all_units_running(juju, app)
+    wait_for_all_units_running(app, juju)
 
     debian_keyring_status = juju.ssh(
         f"{app}/leader", "test -f /etc/git-ubuntu/debian-archive-keyring.gpg | echo $?", ""
@@ -63,7 +63,7 @@ def test_git_ubuntu_source_denylist_exists(app: str, juju: jubilant.Juju):
         app: The app in charge of this unit.
         juju: The juju model in charge of the app.
     """
-    wait_for_all_units_running(juju, app)
+    wait_for_all_units_running(app, juju)
 
     debian_keyring_status = juju.ssh(
         f"{app}/leader",
@@ -82,7 +82,7 @@ def test_controller_port_open(app: str, juju: jubilant.Juju):
         app: The app in charge of this unit.
         juju: The juju model in charge of the app.
     """
-    wait_for_all_units_running(juju, app)
+    wait_for_all_units_running(app, juju)
 
     address = None
     for unit in juju.status().get_units(app).values():
@@ -101,7 +101,7 @@ def test_service_status(app: str, juju: jubilant.Juju):
         juju: The juju model in charge of the app.
     """
     # Wait until machine is ready, then wait an extra 60 seconds for services to fully activate.
-    wait_for_all_units_running(juju, app)
+    wait_for_all_units_running(app, juju)
 
     for unit_name, unit in juju.status().get_units(app).items():
         services = get_services_dict(unit_name, juju)

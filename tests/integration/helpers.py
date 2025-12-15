@@ -79,10 +79,10 @@ def wait_for_all_units_running(app: str, juju: jubilant.Juju) -> None:
         app: The application name.
         juju: The juju model in charge of the app.
     """
-    juju.wait_for(
+    juju.wait(
         lambda status: all(
             unit_status.is_active
             and "Running git-ubuntu importer" in unit_status.juju_status.message
-            for unit_status in status.apps[app].app_status.units.values()
+            for unit_status in status.apps[app].units.values()
         )
     )
