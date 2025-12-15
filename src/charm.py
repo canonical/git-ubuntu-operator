@@ -350,8 +350,10 @@ class GitUbuntuCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("Updating git config for git-ubuntu user.")
 
         if not usr.update_git_user_name(
-            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_USER_NAME
-        ) or not usr.update_git_email(GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_EMAIL):
+            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_USER_NAME, GIT_UBUNTU_USER_HOME_DIR
+        ) or not usr.update_git_email(
+            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_EMAIL, GIT_UBUNTU_USER_HOME_DIR
+        ):
             self.unit.status = ops.BlockedStatus("Failed to set git user config.")
             return False
         return True
@@ -361,7 +363,9 @@ class GitUbuntuCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("Updating lpuser entry for git-ubuntu user.")
         lpuser = self._lp_username
         if lp.is_valid_lp_username(lpuser):
-            if not usr.update_git_ubuntu_lpuser(GIT_UBUNTU_SYSTEM_USER_USERNAME, lpuser):
+            if not usr.update_git_ubuntu_lpuser(
+                GIT_UBUNTU_SYSTEM_USER_USERNAME, lpuser, GIT_UBUNTU_USER_HOME_DIR
+            ):
                 self.unit.status = ops.BlockedStatus("Failed to update lpuser config.")
                 return False
         else:
