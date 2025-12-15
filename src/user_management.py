@@ -23,11 +23,11 @@ def _run_command_as_user(user: str, command: str) -> bool:
     Returns:
         True if the command was run successfully, False otherwise.
     """
-    sudo_command = ["sudo", "-u", user, "--", "/bin/bash", "-c", f'"{command}"']
+    su_command = ["su", "-", user, "-s", "/bin/bash", "-c", f'"{command}"']
 
     try:
         result = subprocess.run(
-            sudo_command,
+            su_command,
             capture_output=True,
             text=True,
             check=False,
