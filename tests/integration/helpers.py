@@ -70,3 +70,19 @@ def is_port_open(host: str, port: int) -> bool:
             return True
     except (ConnectionRefusedError, TimeoutError):
         return False
+
+
+def wait_for_all_units_running(app: str, juju: jubilant.Juju) -> None:
+    """Wait until all units of an application are active and contain the correct running message.
+
+    Args:
+        app: The application name.
+        juju: The juju model in charge of the app.
+    """
+    juju.wait_for(
+        lambda status: all(
+            unit_status.is_active
+            and "Running git-ubuntu importer" in unit_status.juju_status.message
+            for unit_status in status.apps[app].app_status.units.values()
+        )
+    )

@@ -8,7 +8,12 @@
 import logging
 
 import jubilant
-from helpers import check_deb_installed, get_services_dict, is_port_open
+from helpers import (
+    check_deb_installed,
+    get_services_dict,
+    is_port_open,
+    wait_for_all_units_running,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +25,7 @@ def test_installed_apps(app: str, juju: jubilant.Juju):
         app: The app in charge of this unit.
         juju: The juju model in charge of the app.
     """
-    juju.wait(jubilant.all_active)
+    wait_for_all_units_running(juju, app)
 
     assert check_deb_installed(app, 0, juju, "git")
     assert check_deb_installed(app, 0, juju, "sqlite3")
@@ -43,7 +48,7 @@ def test_installed_dump_files(app: str, juju: jubilant.Juju):
         app: The app in charge of this unit.
         juju: The juju model in charge of the app.
     """
-    juju.wait(jubilant.all_active)
+    wait_for_all_units_running(juju, app)
 
     debian_keyring_status = juju.ssh(
         f"{app}/leader", "test -f /etc/git-ubuntu/debian-archive-keyring.gpg | echo $?", ""
@@ -58,7 +63,7 @@ def test_git_ubuntu_source_denylist_exists(app: str, juju: jubilant.Juju):
         app: The app in charge of this unit.
         juju: The juju model in charge of the app.
     """
-    juju.wait(jubilant.all_active)
+    wait_for_all_units_running(juju, app)
 
     debian_keyring_status = juju.ssh(
         f"{app}/leader",
@@ -77,7 +82,7 @@ def test_controller_port_open(app: str, juju: jubilant.Juju):
         app: The app in charge of this unit.
         juju: The juju model in charge of the app.
     """
-    juju.wait(jubilant.all_active)
+    wait_for_all_units_running(juju, app)
 
     address = None
     for unit in juju.status().get_units(app).values():
@@ -96,7 +101,7 @@ def test_service_status(app: str, juju: jubilant.Juju):
         juju: The juju model in charge of the app.
     """
     # Wait until machine is ready, then wait an extra 60 seconds for services to fully activate.
-    juju.wait(jubilant.all_active)
+    wait_for_all_units_running(juju, app)
 
     for unit_name, unit in juju.status().get_units(app).items():
         services = get_services_dict(unit_name, juju)
