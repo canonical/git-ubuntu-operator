@@ -7,9 +7,9 @@
 
 import json
 import logging
-import socket
 
 import jubilant
+from helpers import check_deb_installed, get_services_dict, is_port_open
 
 logger = logging.getLogger(__name__)
 
@@ -22,23 +22,6 @@ def test_installed_apps(app: str, juju: jubilant.Juju):
         juju: The juju model in charge of the app.
     """
     juju.wait(jubilant.all_active)
-
-    def check_deb_installed(app: str, unit: int, juju: jubilant.Juju, package_name: str) -> bool:
-        """Check if a deb pkg is installed on a specific unit.
-
-        Args:
-            app: The app in charge of this unit.
-            unit: The unit number to check.
-            juju: The juju model in charge of the app.
-            package_name: The name of the deb package.
-
-        Returns:
-            True if the package is installed, False otherwise.
-        """
-        install_status = juju.ssh(
-            f"{app}/{unit}", f"dpkg-query --show --showformat='${{Status}}' {package_name}"
-        )
-        return "installed" in install_status
 
     assert check_deb_installed(app, 0, juju, "git")
     assert check_deb_installed(app, 0, juju, "sqlite3")
@@ -97,21 +80,6 @@ def test_controller_port_open(app: str, juju: jubilant.Juju):
     """
     juju.wait(jubilant.all_active)
 
-    def is_port_open(host: str, port: int) -> bool:
-        """Check if a port is opened in a particular host.
-
-        Args:
-            host: The host network location.
-            port: The port number to check.
-
-        Returns: True if the port is open, False otherwise.
-        """
-        try:
-            with socket.create_connection((host, port), timeout=5):
-                return True
-        except (ConnectionRefusedError, TimeoutError):
-            return False
-
     address = None
     for unit in juju.status().get_units(app).values():
         if unit.leader:
@@ -130,32 +98,6 @@ def test_service_status(app: str, juju: jubilant.Juju):
     """
     # Wait until machine is ready, then wait an extra 60 seconds for services to fully activate.
     juju.wait(jubilant.all_active)
-
-    def get_services_dict(unit_name: str, juju: jubilant.Juju) -> dict[str, dict[str, bool | str]]:
-        """Get a dictionary of running systemd services on the app's unit.
-
-        Args:
-            unit_name: The name of the unit to check.
-            juju: The juju model in charge of the app.
-
-        Returns:
-            A dict mapping unit name to if the service is active and its description.
-        """
-        service_output = juju.ssh(
-            unit_name,
-            "systemctl list-units --type service --full --all --output json --no-pager | cat -v",
-            "",
-        )
-        service_json = json.loads(service_output)
-        service_dict = dict()
-
-        for service_entry in service_json:
-            service_dict[service_entry["unit"]] = {
-                "active": service_entry["active"] == "active",
-                "description": service_entry["description"],
-            }
-
-        return service_dict
 
     for unit_name, unit in juju.status().get_units(app).items():
         services = get_services_dict(unit_name, juju)
