@@ -23,11 +23,10 @@ def _run_command_as_user(user: str, command: str) -> bool:
     Returns:
         True if the command was run successfully, False otherwise.
     """
-    su_command = ["su", "-", user, "-s", "/bin/bash", "-c", f'"{command}"']
-
     try:
         result = subprocess.run(
-            su_command,
+            command,
+            user=user,
             capture_output=True,
             text=True,
             check=False,
