@@ -73,7 +73,7 @@ def _expand_service_list_for_workers(
     for service in base_service_list:
         if "@.service" in service:
             for worker_id in range(num_workers):
-                service_name = service.replace("@.service", f"@{node_id}-{worker_id}")
+                service_name = service.replace("@.service", f"@w{node_id}-{worker_id}")
                 expanded_service_list.append(service_name)
         else:
             expanded_service_list.append(service)
