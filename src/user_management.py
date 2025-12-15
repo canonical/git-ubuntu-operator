@@ -31,6 +31,7 @@ def _run_command_as_user(user: str, command: str) -> bool:
             capture_output=True,
             text=True,
             check=False,
+            shell=True,
         )
     except OSError:
         logger.exception("Failed to execute command %s as user %s", command, user)
