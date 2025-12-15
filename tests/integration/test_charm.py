@@ -5,7 +5,6 @@
 
 """Integration tests."""
 
-import json
 import logging
 
 import jubilant
