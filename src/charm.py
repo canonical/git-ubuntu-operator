@@ -318,8 +318,6 @@ class GitUbuntuCharm(ops.CharmBase):
 
             if not node.setup_secondary_node(
                 GIT_UBUNTU_USER_HOME_DIR,
-                self._node_id,
-                self._num_workers,
                 GIT_UBUNTU_SYSTEM_USER_USERNAME,
                 self._is_publishing_active,
                 self._controller_port,
@@ -335,7 +333,7 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _start_services(self) -> None:
         """Start the services and note the result through status."""
-        if node.start(GIT_UBUNTU_USER_HOME_DIR):
+        if node.start(GIT_UBUNTU_USER_HOME_DIR, self._node_id, self._num_workers):
             node_type_str = "primary" if self._is_primary else "secondary"
             self.unit.status = ops.ActiveStatus(
                 f"Running git-ubuntu importer {node_type_str} node."
@@ -352,8 +350,10 @@ class GitUbuntuCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("Updating git config for git-ubuntu user.")
 
         if not usr.update_git_user_name(
-            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_USER_NAME
-        ) or not usr.update_git_email(GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_EMAIL):
+            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_USER_NAME, GIT_UBUNTU_USER_HOME_DIR
+        ) or not usr.update_git_email(
+            GIT_UBUNTU_SYSTEM_USER_USERNAME, GIT_UBUNTU_GIT_EMAIL, GIT_UBUNTU_USER_HOME_DIR
+        ):
             self.unit.status = ops.BlockedStatus("Failed to set git user config.")
             return False
         return True
@@ -363,7 +363,9 @@ class GitUbuntuCharm(ops.CharmBase):
         self.unit.status = ops.MaintenanceStatus("Updating lpuser entry for git-ubuntu user.")
         lpuser = self._lp_username
         if lp.is_valid_lp_username(lpuser):
-            if not usr.update_git_ubuntu_lpuser(GIT_UBUNTU_SYSTEM_USER_USERNAME, lpuser):
+            if not usr.update_git_ubuntu_lpuser(
+                GIT_UBUNTU_SYSTEM_USER_USERNAME, lpuser, GIT_UBUNTU_USER_HOME_DIR
+            ):
                 self.unit.status = ops.BlockedStatus("Failed to update lpuser config.")
                 return False
         else:

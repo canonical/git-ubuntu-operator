@@ -5,7 +5,7 @@
 """Machine user management functions."""
 
 import logging
-from os import system
+import subprocess
 
 from charmlibs import pathops
 from charms.operator_libs_linux.v0 import passwd
@@ -13,20 +13,41 @@ from charms.operator_libs_linux.v0 import passwd
 logger = logging.getLogger(__name__)
 
 
-def _run_command_as_user(user: str, command: str) -> bool:
+def _run_command_as_user(user: str, command: str, env: dict[str, str] | None = None) -> bool:
     """Run a command as a user.
 
     Args:
         user: The user to run the command as.
         command: The command to run.
+        env: Dictionary of environment variables to set for the command.
 
     Returns:
         True if the command was run successfully, False otherwise.
     """
-    command_result = system(f'su - {user} -s /bin/bash -c "{command}"')
-    if command_result != 0:
-        logger.error("Command %s exited with result %d.", command, command_result)
+    try:
+        result = subprocess.run(
+            command,
+            user=user,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            shell=True,
+        )
+    except OSError:
+        logger.exception("Failed to execute command %s as user %s", command, user)
         return False
+
+    if result.returncode != 0:
+        logger.error(
+            "Command %s exited with result %d - stdout: %s - stderr: %s",
+            command,
+            result.returncode,
+            result.stdout,
+            result.stderr,
+        )
+        return False
+
     return True
 
 
@@ -119,29 +140,31 @@ def refresh_git_ubuntu_source(
 
         # Update origin to the current source url
         if not _run_command_as_user(
-            user, f"git -C {clone_dir.as_posix()} remote set-url origin {source_url}"
+            user,
+            f"git -C {clone_dir.as_posix()} remote set-url origin {source_url}",
+            {"HOME": home_dir},
         ):
             logger.error("Failed to update git-ubuntu source origin.")
             return False
 
         # Run git pull to get up to date
-        pull_command = f"git -C {clone_dir.as_posix()} pull"
+        env = {"HOME": home_dir}
         if https_proxy != "":
-            pull_command = f"https_proxy={https_proxy} {pull_command}"
+            env["HTTPS_PROXY"] = https_proxy
 
-        if not _run_command_as_user(user, pull_command):
+        if not _run_command_as_user(user, f"git -C {clone_dir.as_posix()} pull", env):
             logger.error("Failed to update existing git-ubuntu source.")
             return False
 
         return True
 
     # Clone the repository
-    clone_command = f"git clone {source_url} {clone_dir.as_posix()}"
+    env = {"HOME": home_dir}
     if https_proxy != "":
-        clone_command = f"https_proxy={https_proxy} {clone_command}"
+        env["HTTPS_PROXY"] = https_proxy
 
     logger.info("Cloning git-ubuntu source to %s", clone_dir.as_posix())
-    if not _run_command_as_user(user, clone_command):
+    if not _run_command_as_user(user, f"git clone {source_url} {clone_dir.as_posix()}", env):
         logger.error("Failed to clone git-ubuntu source.")
         return False
 
@@ -290,50 +313,68 @@ def set_snap_homedirs(home_dir: str) -> bool:
         True if the homedirs update succeeded, False otherwise.
     """
     homedirs_entry = pathops.LocalPath(home_dir).parent.as_posix()
-    command_result = system(f"snap set system homedirs={homedirs_entry}")
-    if command_result != 0:
+
+    try:
+        command_result = subprocess.run(
+            ["snap", "set", "system", f"homedirs={homedirs_entry}"], check=False
+        )
+    except OSError:
+        logger.exception("Failed to execute snap homedir setting command.")
+        return False
+
+    if command_result.returncode != 0:
         logger.error("snap homedir setting exited with result %d.", command_result)
         return False
+
     return True
 
 
-def update_git_user_name(user: str, name: str) -> bool:
+def update_git_user_name(user: str, name: str, home_dir: str) -> bool:
     """Update the git user full name entry.
 
     Args:
         user: The system user to update the config for.
         name: The full name for the git user.
+        home_dir: The home directory for the user.
 
     Returns:
         True if config update succeeded, False otherwise.
     """
     logger.info("Setting git user.name to %s for user %s.", name, user)
-    return _run_command_as_user(user, f"git config --global user.name '{name}'")
+    return _run_command_as_user(
+        user, f"git config --global user.name '{name}'", {"HOME": home_dir}
+    )
 
 
-def update_git_email(user: str, email: str) -> bool:
+def update_git_email(user: str, email: str, home_dir: str) -> bool:
     """Update the git user email address entry.
 
     Args:
         user: The system user to update the config for.
         email: The email address for the git user.
+        home_dir: The home directory for the user.
 
     Returns:
         True if config update succeeded, False otherwise.
     """
     logger.info("Setting git user.email to %s for user %s.", email, user)
-    return _run_command_as_user(user, f"git config --global user.email {email}")
+    return _run_command_as_user(
+        user, f"git config --global user.email {email}", {"HOME": home_dir}
+    )
 
 
-def update_git_ubuntu_lpuser(user: str, lp_username: str) -> bool:
+def update_git_ubuntu_lpuser(user: str, lp_username: str, home_dir: str) -> bool:
     """Update the launchpad user setting for git.
 
     Args:
         user: The system user to update the config for.
         lp_username: The launchpad username set in git.
+        home_dir: The home directory for the user.
 
     Returns:
         True if config update succeeded, False otherwise.
     """
     logger.info("Setting git gitubuntu.lpuser to %s for user %s.", lp_username, user)
-    return _run_command_as_user(user, f"git config --global gitubuntu.lpuser {lp_username}")
+    return _run_command_as_user(
+        user, f"git config --global gitubuntu.lpuser {lp_username}", {"HOME": home_dir}
+    )

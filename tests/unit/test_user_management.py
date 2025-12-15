@@ -15,9 +15,9 @@ def test_git_update_user_name_config_success(mock_run_command_as_user):
     """Test successful git user name config update."""
     mock_run_command_as_user.return_value = True
 
-    assert user_management.update_git_user_name("ubuntu", "Test User")
+    assert user_management.update_git_user_name("ubuntu", "Test User", "/home/ubuntu")
     mock_run_command_as_user.assert_called_once_with(
-        "ubuntu", "git config --global user.name 'Test User'"
+        "ubuntu", "git config --global user.name 'Test User'", {"HOME": "/home/ubuntu"}
     )
 
 
@@ -26,9 +26,9 @@ def test_git_update_user_name_config_fail(mock_run_command_as_user):
     """Test failed git user name config update."""
     mock_run_command_as_user.return_value = False
 
-    assert not user_management.update_git_user_name("ubuntu", "Test User")
+    assert not user_management.update_git_user_name("ubuntu", "Test User", "/home/ubuntu")
     mock_run_command_as_user.assert_called_once_with(
-        "ubuntu", "git config --global user.name 'Test User'"
+        "ubuntu", "git config --global user.name 'Test User'", {"HOME": "/home/ubuntu"}
     )
 
 
@@ -37,9 +37,9 @@ def test_git_update_user_email_config_success(mock_run_command_as_user):
     """Test successful git user email config update."""
     mock_run_command_as_user.return_value = True
 
-    assert user_management.update_git_email("ubuntu", "test@example.com")
+    assert user_management.update_git_email("ubuntu", "test@example.com", "/home/ubuntu")
     mock_run_command_as_user.assert_called_once_with(
-        "ubuntu", "git config --global user.email test@example.com"
+        "ubuntu", "git config --global user.email test@example.com", {"HOME": "/home/ubuntu"}
     )
 
 
@@ -48,9 +48,9 @@ def test_git_update_user_email_config_fail(mock_run_command_as_user):
     """Test failed git user email config update."""
     mock_run_command_as_user.return_value = False
 
-    assert not user_management.update_git_email("ubuntu", "test@example.com")
+    assert not user_management.update_git_email("ubuntu", "test@example.com", "/home/ubuntu")
     mock_run_command_as_user.assert_called_once_with(
-        "ubuntu", "git config --global user.email test@example.com"
+        "ubuntu", "git config --global user.email test@example.com", {"HOME": "/home/ubuntu"}
     )
 
 
@@ -59,9 +59,9 @@ def test_lp_user_config_success(mock_run_command_as_user):
     """Test successful launchpad user config update."""
     mock_run_command_as_user.return_value = True
 
-    assert user_management.update_git_ubuntu_lpuser("ubuntu", "test-lp-user")
+    assert user_management.update_git_ubuntu_lpuser("ubuntu", "test-lp-user", "/home/ubuntu")
     mock_run_command_as_user.assert_called_once_with(
-        "ubuntu", "git config --global gitubuntu.lpuser test-lp-user"
+        "ubuntu", "git config --global gitubuntu.lpuser test-lp-user", {"HOME": "/home/ubuntu"}
     )
 
 
@@ -70,7 +70,7 @@ def test_lp_user_config_fail(mock_run_command_as_user):
     """Test failed launchpad user config update."""
     mock_run_command_as_user.return_value = False
 
-    assert not user_management.update_git_ubuntu_lpuser("ubuntu", "test-lp-user")
+    assert not user_management.update_git_ubuntu_lpuser("ubuntu", "test-lp-user", "/home/ubuntu")
     mock_run_command_as_user.assert_called_once_with(
-        "ubuntu", "git config --global gitubuntu.lpuser test-lp-user"
+        "ubuntu", "git config --global gitubuntu.lpuser test-lp-user", {"HOME": "/home/ubuntu"}
     )

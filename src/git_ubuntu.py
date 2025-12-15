@@ -53,6 +53,34 @@ def _get_services_list(service_folder: str) -> list[str] | None:
     return service_list
 
 
+def _expand_service_list_for_workers(
+    base_service_list: list[str],
+    node_id: int,
+    num_workers: int,
+) -> list[str]:
+    """Expand the base service list to include worker instances.
+
+    Args:
+        base_service_list: The base list of service names.
+        node_id: The unique ID of this node.
+        num_workers: The number of worker instances to set up.
+
+    Returns:
+        The expanded list of service names including worker instances.
+    """
+    expanded_service_list = []
+
+    for service in base_service_list:
+        if "@.service" in service:
+            for worker_id in range(num_workers):
+                service_name = service.replace("@.service", f"@w{node_id}-{worker_id}")
+                expanded_service_list.append(service_name)
+        else:
+            expanded_service_list.append(service)
+
+    return expanded_service_list
+
+
 def generate_systemd_service_string(
     description: str,
     service_user: str,
@@ -139,7 +167,7 @@ def generate_systemd_service_string(
 
 
 def setup_broker_service(
-    local_folder: str,
+    home_dir: str,
     user: str,
     group: str,
     broker_port: int = 1692,
@@ -147,7 +175,7 @@ def setup_broker_service(
     """Set up broker systemd service file.
 
     Args:
-        local_folder: The local folder to store the service in.
+        home_dir: The home directory of the user.
         user: The user to run the service as.
         group: The permissions group to run the service as.
         broker_port: The network port to provide tasks to workers on.
@@ -170,11 +198,12 @@ def setup_broker_service(
         wanted_by="multi-user.target",
     )
 
-    return create_systemd_service_file(filename, local_folder, service_string)
+    services_folder = pathops.LocalPath(home_dir, "services")
+    return create_systemd_service_file(filename, services_folder.as_posix(), service_string)
 
 
 def setup_poller_service(
-    local_folder: str,
+    home_dir: str,
     user: str,
     group: str,
     denylist: str,
@@ -184,7 +213,7 @@ def setup_poller_service(
     """Set up poller systemd service file.
 
     Args:
-        local_folder: The local folder to store the service in.
+        home_dir: The home directory of the user.
         user: The user to run the service as.
         group: The permissions group to run the service as.
         denylist: The location of the package denylist.
@@ -219,27 +248,26 @@ def setup_poller_service(
         wanted_by="multi-user.target",
     )
 
-    return create_systemd_service_file(filename, local_folder, service_string)
+    services_folder = pathops.LocalPath(home_dir, "services")
+    return create_systemd_service_file(filename, services_folder.as_posix(), service_string)
 
 
 def setup_worker_service(
-    local_folder: str,
+    home_dir: str,
     user: str,
     group: str,
-    worker_name: str = "",
     push_to_lp: bool = True,
     broker_ip: str = "127.0.0.1",
     broker_port: int = 1692,
     lp_credentials_filename: str = "",
     https_proxy: str = "",
 ) -> bool:
-    """Set up worker systemd file with designated worker name.
+    """Set up worker systemd file.
 
     Args:
-        local_folder: The local folder to store the service in.
+        home_dir: The home directory of the user.
         user: The user to run the service as.
         group: The permissions group to run the service as.
-        worker_name: The unique worker ID to add to the service filename.
         push_to_lp: True if publishing repositories to Launchpad.
         broker_ip: The IP address of the broker process' node.
         broker_port: The network port that the broker provides tasks on.
@@ -249,13 +277,13 @@ def setup_worker_service(
     Returns:
         True if setup succeeded, False otherwise.
     """
-    filename = f"git-ubuntu-importer-service-worker{worker_name}.service"
+    filename = "git-ubuntu-importer-service-worker@.service"
 
     publish_arg = " --no-push" if not push_to_lp else ""
     broker_url = f"tcp://{broker_ip}:{broker_port}"
     exec_start = f"/snap/bin/git-ubuntu importer-service-worker{publish_arg} %i {broker_url}"
 
-    environment = "PYTHONUNBUFFERED=1"
+    environment = f"HOME={home_dir} PYTHONUNBUFFERED=1"
 
     if lp_credentials_filename != "":
         environment = f"LP_CREDENTIALS_FILE={lp_credentials_filename} " + environment
@@ -279,14 +307,17 @@ def setup_worker_service(
         wanted_by="multi-user.target",
     )
 
-    return create_systemd_service_file(filename, local_folder, service_string)
+    services_folder = pathops.LocalPath(home_dir, "services")
+    return create_systemd_service_file(filename, services_folder.as_posix(), service_string)
 
 
-def start_services(service_folder: str) -> bool:
+def start_services(service_folder: str, node_id: int, num_workers: int) -> bool:
     """Start all git-ubuntu services and wait for startup to complete.
 
     Args:
         service_folder: The name of the folder containing the service files.
+        node_id: The unique ID of this node.
+        num_workers: The number of worker instances to start if secondary.
 
     Returns:
         True if all services were started successfully, False otherwise.
@@ -295,6 +326,8 @@ def start_services(service_folder: str) -> bool:
 
     if service_list is None:
         return False
+
+    service_list = _expand_service_list_for_workers(service_list, node_id, num_workers)
 
     services_started = True
 
@@ -337,6 +370,10 @@ def stop_services(service_folder: str) -> bool:
     services_stopped = True
 
     for service in service_list:
+        # Glob worker services
+        if "@.service" in service:
+            service = f"'{service.replace('@.service', '@*')}'"
+
         if stop_service(service):
             logger.info("Stopped service %s", service)
         else:
