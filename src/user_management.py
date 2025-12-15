@@ -5,7 +5,7 @@
 """Machine user management functions."""
 
 import logging
-from os import system
+import subprocess
 
 from charmlibs import pathops
 from charms.operator_libs_linux.v0 import passwd
@@ -23,10 +23,29 @@ def _run_command_as_user(user: str, command: str) -> bool:
     Returns:
         True if the command was run successfully, False otherwise.
     """
-    command_result = system(f'su - {user} -s /bin/bash -c "{command}"')
-    if command_result != 0:
-        logger.error("Command %s exited with result %d.", command, command_result)
+    sudo_command = ["sudo", "-u", user, "--", "/bin/bash", "-c", f'"{command}"']
+
+    try:
+        result = subprocess.run(
+            sudo_command,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        logger.exception("Failed to execute command %s as user %s", command, user)
         return False
+
+    if result.returncode != 0:
+        logger.error(
+            "Command %s exited with result %d - stdout: %s - stderr: %s",
+            command,
+            result.returncode,
+            result.stdout,
+            result.stderr,
+        )
+        return False
+
     return True
 
 
@@ -290,10 +309,19 @@ def set_snap_homedirs(home_dir: str) -> bool:
         True if the homedirs update succeeded, False otherwise.
     """
     homedirs_entry = pathops.LocalPath(home_dir).parent.as_posix()
-    command_result = system(f"snap set system homedirs={homedirs_entry}")
-    if command_result != 0:
+
+    try:
+        command_result = subprocess.run(
+            ["snap", "set", "system", f"homedirs={homedirs_entry}"], check=False
+        )
+    except OSError:
+        logger.exception("Failed to execute snap homedir setting command.")
+        return False
+
+    if command_result.returncode != 0:
         logger.error("snap homedir setting exited with result %d.", command_result)
         return False
+
     return True
 
 
