@@ -8,7 +8,6 @@
 import json
 import logging
 import socket
-from time import sleep
 
 import jubilant
 
@@ -131,7 +130,6 @@ def test_service_status(app: str, juju: jubilant.Juju):
     """
     # Wait until machine is ready, then wait an extra 60 seconds for services to fully activate.
     juju.wait(jubilant.all_active)
-    sleep(60)
 
     def get_services_dict(unit_name: str, juju: jubilant.Juju) -> dict[str, dict[str, bool | str]]:
         """Get a dictionary of running systemd services on the app's unit.
@@ -177,13 +175,13 @@ def test_service_status(app: str, juju: jubilant.Juju):
         else:
             node_id = int(unit_name.split("/")[-1])
 
-            assert services[f"git-ubuntu-importer-service-worker@{node_id}-0.service"]["active"]
+            assert services[f"git-ubuntu-importer-service-worker@w{node_id}-0.service"]["active"]
             assert (
-                services[f"git-ubuntu-importer-service-worker@{node_id}-0.service"]["description"]
+                services[f"git-ubuntu-importer-service-worker@w{node_id}-0.service"]["description"]
                 == "git-ubuntu importer service worker"
             )
-            assert services[f"git-ubuntu-importer-service-worker@{node_id}-1.service"]["active"]
+            assert services[f"git-ubuntu-importer-service-worker@w{node_id}-1.service"]["active"]
             assert (
-                services[f"git-ubuntu-importer-service-worker@{node_id}-1.service"]["description"]
+                services[f"git-ubuntu-importer-service-worker@w{node_id}-1.service"]["description"]
                 == "git-ubuntu importer service worker"
             )
