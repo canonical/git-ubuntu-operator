@@ -456,7 +456,10 @@ class GitUbuntuCharm(ops.CharmBase):
 
     def _on_leader_elected(self, _: ops.LeaderElectedEvent) -> None:
         """Refresh services and update peer data when the unit is elected as leader."""
-        if not self._set_peer_primary_node_address():
+        if self._set_peer_primary_node_address():
+            self._refresh_importer_node()
+            self._start_services()
+        else:
             self.unit.status = ops.BlockedStatus(
                 "Failed to update primary node IP in peer relation."
             )
