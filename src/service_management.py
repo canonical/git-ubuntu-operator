@@ -8,8 +8,7 @@ import logging
 import time
 from os import link
 
-from charmlibs import pathops
-from charms.operator_libs_linux.v1 import systemd
+from charmlibs import pathops, systemd
 
 logger = logging.getLogger(__name__)
 
