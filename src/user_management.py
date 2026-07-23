@@ -7,8 +7,7 @@
 import logging
 import subprocess
 
-from charmlibs import pathops
-from charms.operator_libs_linux.v0 import passwd
+from charmlibs import passwd, pathops
 
 logger = logging.getLogger(__name__)
 

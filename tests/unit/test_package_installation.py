@@ -7,8 +7,7 @@
 
 from unittest.mock import patch
 
-from charmlibs import apt
-from charms.operator_libs_linux.v2 import snap
+from charmlibs import apt, snap
 
 import package_installation as pkgs
 

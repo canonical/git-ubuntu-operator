@@ -8,8 +8,7 @@ import logging
 from pathlib import Path
 from shutil import copy
 
-from charmlibs import apt, pathops
-from charms.operator_libs_linux.v2 import snap
+from charmlibs import apt, pathops, snap
 
 logger = logging.getLogger(__name__)
 

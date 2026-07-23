@@ -69,7 +69,7 @@ def test_git_ubuntu_source_denylist_exists(app: str, juju: jubilant.Juju):
         f"{app}/leader",
         "test -f "
         + "/var/local/git-ubuntu/live-allowlist-denylist-source/gitubuntu/"
-        + "source-package-denylist.txt | echo $?",
+        + "data/source-package-denylist.txt | echo $?",
         "",
     ).strip()
     assert debian_keyring_status == "0"

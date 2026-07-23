@@ -83,7 +83,7 @@ def setup_primary_node(
 
     denylist = pathops.LocalPath(
         git_ubuntu_user_home,
-        "live-allowlist-denylist-source/gitubuntu/source-package-denylist.txt",
+        "live-allowlist-denylist-source/gitubuntu/data/source-package-denylist.txt",
     )
 
     # Setup poller service.
