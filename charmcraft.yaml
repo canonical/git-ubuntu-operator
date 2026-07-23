@@ -35,14 +35,6 @@ parts:
       - README.md
       - icon.svg
 
-charm-libs:
-  - lib: operator_libs_linux.passwd
-    version: "0"
-  - lib: operator-libs-linux.snap
-    version: "2"
-  - lib: operator_libs_linux.systemd
-    version: "1"
-
 peers:
   replicas:
     interface: git_ubuntu_primary_info
